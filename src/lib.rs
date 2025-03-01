@@ -1,2 +1,2 @@
 pub mod combinators;
-pub mod parsers;
+pub mod parser;
