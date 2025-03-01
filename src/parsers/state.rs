@@ -1,3 +1,5 @@
+use std::cmp;
+
 use super::{
     errors::{ErrorCollection, ParseError},
     input::ParseInput,
@@ -58,11 +60,28 @@ impl<I: ParseInput, E: ParseError> ParserState<I, E> {
         }
     }
 
-    /// Takes `n` elements from the input, starting from the head.
+    /// Takes `n` elements from the input, starting from the head. If the input is smaller than
+    /// `n`, returns the input as-is
     pub fn take(&self, n: usize) -> Self {
         Self {
             input: self.input.fork(),
-            span: Span::new(self.span.head() + n, self.span.tail()),
+            span: Span::new(
+                self.span.head(),
+                cmp::min(self.span.head() + n, self.span.tail()),
+            ),
+            errors: self.errors.clone(),
+        }
+    }
+
+    /// Skips the first `n` elements from the input, starting from the head, and returns the rest.
+    /// If the input is smaller than `n`, returns an empty input.
+    pub fn skip(&self, n: usize) -> Self {
+        Self {
+            input: self.input.fork(),
+            span: Span::new(
+                cmp::min(self.span.head() + n, self.span.tail()),
+                self.span.tail(),
+            ),
             errors: self.errors.clone(),
         }
     }

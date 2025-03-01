@@ -7,7 +7,7 @@ use crate::parsers::{
 /// Consumes the input and returns it.
 pub fn id<I: ParseInput, E: ParseError>(s: ParserState<I, E>) -> PResult<I, I, E> {
     let consumed = s.input();
-    Ok((s.take(s.len()), consumed))
+    Ok((s.skip(s.len()), consumed))
 }
 
 #[cfg(test)]
@@ -17,9 +17,7 @@ mod tests {
 
     #[test]
     fn can_consume_input() {
-        let input = "hello";
-
-        let result = id::<&str, DefaultError>.parse(input).unwrap();
+        let result = id::<&str, DefaultError>.parse("hello").unwrap();
         assert_eq!(result, "hello");
 
         let result = id::<&str, DefaultError>

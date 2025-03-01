@@ -1,6 +1,7 @@
 use super::span::Span;
+use core::fmt;
 
-pub trait ParseInput: PartialEq + Eq + Clone {
+pub trait ParseInput: fmt::Debug + PartialEq + Eq + Clone {
     /// Gets the length of the input.
     fn len(&self) -> usize;
 
