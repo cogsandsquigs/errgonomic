@@ -1,5 +1,5 @@
 use super::{
-    errors::Errors,
+    errors::{Error, Errors},
     input::{Input, Underlying},
 };
 
@@ -27,6 +27,12 @@ impl<I: Underlying> State<I> {
     /// Get the errors that occurred during parsing.
     pub fn errors(&self) -> &Errors<I> {
         &self.errors
+    }
+
+    /// Append an error to the list of errors.
+    pub fn error(mut self, error: Error<I>) -> Self {
+        self.errors.push(error);
+        self
     }
 }
 

@@ -51,5 +51,11 @@ impl<I: Underlying> Errors<I> {
 /// Any possible errors that could have occurred during parsing.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Error<I: Underlying> {
-    Expected { expected: Input<I>, found: Input<I> },
+    /// Expected a specific thing, but didn't get it.
+    /// NOTE: `expected` should be the expected input, and `found` should be the remaining input.
+    Expected { expected: I, found: Input<I> },
+
+    /// Expected the end of input, but didn't get it.
+    /// NOTE: `found` should be the remaining input.
+    ExpectedEOI { found: Input<I> },
 }

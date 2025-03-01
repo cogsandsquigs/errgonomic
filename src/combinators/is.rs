@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::Result,
+    errors::{Error, Result},
     input::{Input, Underlying},
     state::State,
     Parser,
@@ -24,7 +24,11 @@ pub struct Is<I: Underlying> {
 impl<I: Underlying> Parser<I, Input<I>> for Is<I> {
     fn process(&mut self, mut state: State<I>) -> Result<I, Input<I>> {
         if state.input.len() < self.matches.len() {
-            todo!("Need to error out here!")
+            let input = state.input.fork();
+            return Err(state.error(Error::Expected {
+                expected: self.matches.clone(),
+                found: input,
+            }));
         }
 
         let grabbed = state.input.take(self.matches.len());
@@ -33,7 +37,10 @@ impl<I: Underlying> Parser<I, Input<I>> for Is<I> {
             state.input = state.input.skip(self.matches.len());
             Ok((state, grabbed))
         } else {
-            todo!("Need to error out here!")
+            Err(state.error(Error::Expected {
+                expected: self.matches.clone(),
+                found: grabbed,
+            }))
         }
     }
 }
@@ -61,6 +68,28 @@ mod tests {
         let result: Input<&str> = is("test").parse("test123").unwrap();
         assert_eq!(result, "test");
 
-        todo!("Need to test error cases!");
+        let result: State<&str> = is("test").process("123test".into()).unwrap_err();
+        assert!(result.errors().any_errs());
+        assert_eq!(result.errors().num_errors(), 1);
+        assert_eq!(result.errors().errors().len(), 1);
+        assert_eq!(
+            result.errors().errors()[0],
+            crate::parser::errors::Error::Expected {
+                expected: "test",
+                found: Input::new_with_span("123test", (0..4).into())
+            }
+        );
+
+        let result: State<&str> = is("test").process("te".into()).unwrap_err();
+        assert!(result.errors().any_errs());
+        assert_eq!(result.errors().num_errors(), 1);
+        assert_eq!(result.errors().errors().len(), 1);
+        assert_eq!(
+            result.errors().errors()[0],
+            crate::parser::errors::Error::Expected {
+                expected: "test",
+                found: Input::new_with_span("te", (0..2).into())
+            }
+        );
     }
 }

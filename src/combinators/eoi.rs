@@ -1,24 +1,42 @@
-use crate::parser::{errors::Result, input::Underlying, state::State};
+use crate::parser::{
+    errors::{Error, Result},
+    input::Underlying,
+    state::State,
+};
 
 /// Parses an end of input.
 pub fn eoi<I: Underlying>(state: State<I>) -> Result<I, ()> {
     if state.input.is_empty() {
         Ok((state, ()))
     } else {
-        todo!("Need to error out here!")
+        let input = state.input.fork();
+        Err(state.error(Error::ExpectedEOI { found: input }))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::parser::input::Input;
+
+    use super::*;
+
     #[test]
     fn can_parse_eoi() {
-        let result: (crate::parser::state::State<&str>, ()) = super::eoi("".into()).unwrap();
+        let result: (State<&str>, ()) = super::eoi("".into()).unwrap();
         assert!(!result.0.errors().any_errs());
         assert_eq!(result.0.errors().num_errors(), 0);
         assert_eq!(result.0.errors().errors().len(), 0);
         assert_eq!(result.0.input, "");
 
-        todo!("Need to test error cases!");
+        let result: State<&str> = super::eoi("a".into()).unwrap_err();
+        assert!(result.errors().any_errs());
+        assert_eq!(result.errors().num_errors(), 1);
+        assert_eq!(result.errors().errors().len(), 1);
+        assert_eq!(
+            result.errors().errors()[0],
+            Error::ExpectedEOI {
+                found: Input::new_with_span("a", (0..1).into())
+            }
+        );
     }
 }

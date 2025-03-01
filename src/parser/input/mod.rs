@@ -24,6 +24,11 @@ impl<I: Underlying> Input<I> {
         Self { underlying, span }
     }
 
+    /// Create a new `Input` object with a specific span.
+    pub fn new_with_span(underlying: I, span: Span) -> Self {
+        Self { underlying, span }
+    }
+
     /// Get the length of the input.
     pub fn len(&self) -> usize {
         self.span.len()
