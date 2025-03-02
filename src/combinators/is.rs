@@ -9,16 +9,12 @@ use crate::parser::{
 /// If not, it errors out.
 /// NOTE: This only matches up to the length of the matching string. If there is more input
 /// after the matching string, it will be left in the parser state.
-pub fn is<I: Underlying, S: Into<I>>(matches: S) -> Is<I> {
-    Is {
-        matches: matches.into(),
-        _1: core::marker::PhantomData,
-    }
+pub fn is<I: Underlying>(matches: I) -> Is<I> {
+    Is { matches }
 }
 
 pub struct Is<I: Underlying> {
     matches: I,
-    _1: core::marker::PhantomData<I>,
 }
 
 impl<I: Underlying> Parser<I, Input<I>> for Is<I> {

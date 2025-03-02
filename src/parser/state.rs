@@ -34,6 +34,14 @@ impl<I: Underlying> State<I> {
         self.errors.push(error);
         self
     }
+
+    /// Fork the state.
+    pub fn fork(&self) -> Self {
+        Self {
+            errors: self.errors.clone(),
+            input: self.input.fork(),
+        }
+    }
 }
 
 impl<I> From<Input<I>> for State<I>

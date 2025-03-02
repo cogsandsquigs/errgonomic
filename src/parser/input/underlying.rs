@@ -1,5 +1,5 @@
 use crate::parser::span::Span;
-use std::fmt::Debug;
+use core::fmt::Debug;
 
 /// Anything that implements `Underlying` can be used as an `Input` to the parser.
 pub trait Underlying: PartialEq + Eq + Debug + Clone {

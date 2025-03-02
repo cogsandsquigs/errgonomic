@@ -10,7 +10,10 @@ use mappings::{Chain, Map};
 use state::State;
 
 /// The parser trait. Used to parse input.
-pub trait Parser<I: Underlying, O> {
+pub trait Parser<I, O>
+where
+    I: Underlying,
+{
     /// Processes a parser state and returns a new state.
     /// NOTE: When making parsers, this should be the function to process state and state-changes.
     fn process(&mut self, state: State<I>) -> Result<I, O>;
@@ -44,8 +47,9 @@ pub trait Parser<I: Underlying, O> {
     }
 }
 
-impl<I: Underlying, O, P: Parser<I, O>> Parser<I, O> for P
+impl<I, O, P> Parser<I, O> for P
 where
+    I: Underlying,
     P: FnMut(State<I>) -> Result<I, O>,
 {
     fn process(&mut self, state: State<I>) -> Result<I, O> {
