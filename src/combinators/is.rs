@@ -1,5 +1,3 @@
-use std::cmp;
-
 use crate::parser::{
     errors::{CustomError, Error},
     input::{Input, Underlying},
