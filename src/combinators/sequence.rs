@@ -1,68 +1,31 @@
-// use crate::parser::{errors::Result, input::Underlying, state::State, Parser};
-//
-// pub fn any<I: Underlying, O, const N: usize>(
-//     ps: [&dyn Parser<I, O>; N],
-// ) -> impl Parser<I, O> + use<'_, I, O, N> {
-//     Any { ps }
-// }
-//
-// pub struct Any<'a, I: Underlying, O, const N: usize> {
-//     ps: [&'a dyn Parser<I, O>; N],
-// }
-//
-// impl<'a, I: Underlying, O, const N: usize> Parser<I, O> for Any<'a, I, O, N> {
-//     fn process(&mut self, state: State<I>) -> Result<I, O> {
-//         todo!()
-//     }
-// }
-//
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::{
-//         combinators::{id, is},
-//         parser::input::Input,
-//     };
-//
-//     #[test]
-//     fn can_parse_any() {
-//         let result: (Input<&str>, &str) = any([&is("a"), &id]).process("a".into()).unwrap();
-//     }
-// }
-
 use crate::parser::{errors::Result, input::Underlying, state::State, Parser};
 
 /// Parses any of the given parsers. The first parser that succeeds will be the output. Otherwise,
 /// if none of the parsers succeed, the error from the last parser will be returned.
-pub fn any<I: Underlying, O, L: List<I, O>>(ps: L) -> impl Parser<I, O> {
-    Any {
-        ps,
-        _phantom: core::marker::PhantomData,
-    }
-}
-
-pub struct Any<I: Underlying, O, L: List<I, O>> {
-    ps: L,
-    _phantom: core::marker::PhantomData<(I, O)>,
-}
-
-impl<I: Underlying, O, L: List<I, O>> Parser<I, O> for Any<I, O, L> {
-    fn process(&mut self, state: State<I>) -> Result<I, O> {
-        self.ps.any(state)
-    }
+pub fn any<I: Underlying, O, L: List<I, O>>(mut ps: L) -> impl Parser<I, O> {
+    move |state| ps.any(state)
 }
 
 pub trait List<I: Underlying, O> {
     fn any(&mut self, state: State<I>) -> Result<I, O>;
 }
 
-impl<I: Underlying, O, P: Parser<I, O>> List<I, O> for (P,) {
+impl<I, O, P> List<I, O> for (P,)
+where
+    I: Underlying,
+    P: Parser<I, O>,
+{
     fn any(&mut self, state: State<I>) -> Result<I, O> {
         self.0.process(state)
     }
 }
 
-impl<I: Underlying, O, P1: Parser<I, O>, P2: Parser<I, O>> List<I, O> for (P1, P2) {
+impl<I, O, P1, P2> List<I, O> for (P1, P2)
+where
+    I: Underlying,
+    P1: Parser<I, O>,
+    P2: Parser<I, O>,
+{
     fn any(&mut self, state: State<I>) -> Result<I, O> {
         self.0
             .process(state.fork())
@@ -70,14 +33,54 @@ impl<I: Underlying, O, P1: Parser<I, O>, P2: Parser<I, O>> List<I, O> for (P1, P
     }
 }
 
-impl<I: Underlying, O, P1: Parser<I, O>, P2: Parser<I, O>, P3: Parser<I, O>> List<I, O>
-    for (P1, P2, P3)
+impl<I, O, P1, P2, P3> List<I, O> for (P1, P2, P3)
+where
+    I: Underlying,
+    P1: Parser<I, O>,
+    P2: Parser<I, O>,
+    P3: Parser<I, O>,
 {
     fn any(&mut self, state: State<I>) -> Result<I, O> {
         self.0
             .process(state.fork())
             .or_else(|_| self.1.process(state.fork()))
             .or_else(|_| self.2.process(state))
+    }
+}
+
+impl<I, O, P1, P2, P3, P4> List<I, O> for (P1, P2, P3, P4)
+where
+    I: Underlying,
+    P1: Parser<I, O>,
+    P2: Parser<I, O>,
+    P3: Parser<I, O>,
+    P4: Parser<I, O>,
+{
+    fn any(&mut self, state: State<I>) -> Result<I, O> {
+        self.0
+            .process(state.fork())
+            .or_else(|_| self.1.process(state.fork()))
+            .or_else(|_| self.2.process(state.fork()))
+            .or_else(|_| self.3.process(state))
+    }
+}
+
+impl<I, O, P1, P2, P3, P4, P5> List<I, O> for (P1, P2, P3, P4, P5)
+where
+    I: Underlying,
+    P1: Parser<I, O>,
+    P2: Parser<I, O>,
+    P3: Parser<I, O>,
+    P4: Parser<I, O>,
+    P5: Parser<I, O>,
+{
+    fn any(&mut self, state: State<I>) -> Result<I, O> {
+        self.0
+            .process(state.fork())
+            .or_else(|_| self.1.process(state.fork()))
+            .or_else(|_| self.2.process(state.fork()))
+            .or_else(|_| self.3.process(state.fork()))
+            .or_else(|_| self.4.process(state))
     }
 }
 
@@ -91,8 +94,7 @@ mod tests {
 
     #[test]
     fn can_parse_any() {
-        let result: (State<&str>, Input<&str>) =
-            super::any((is("test"),)).process("test".into()).unwrap();
+        let result: (State<&str>, Input<&str>) = any((is("test"),)).process("test".into()).unwrap();
 
         assert_eq!(result.1, "test");
         assert!(!result.0.errors().any_errs());
@@ -100,7 +102,7 @@ mod tests {
         assert_eq!(result.0.errors().errors().len(), 0);
         assert_eq!(result.0.input, "");
 
-        let result: (State<&str>, Input<&str>) = super::any((is::<&str>("x"), is("test")))
+        let result: (State<&str>, Input<&str>) = any((is("x"), is("test")))
             .process("test123".into())
             .unwrap();
         assert_eq!(result.1, "test");
@@ -109,12 +111,10 @@ mod tests {
         assert_eq!(result.0.errors().errors().len(), 0);
         assert_eq!(result.0.input, "123");
 
-        let result: Input<&str> = super::any((id, is("test"))).parse("test123").unwrap();
+        let result: Input<&str> = any((id, is("test"))).parse("test123").unwrap();
         assert_eq!(result, "test123");
 
-        let result: State<&str> = super::any((is("test"),))
-            .process("123test".into())
-            .unwrap_err();
+        let result: State<&str> = any((is("test"),)).process("123test".into()).unwrap_err();
         assert!(result.errors().any_errs());
         assert_eq!(result.errors().num_errors(), 1);
         assert_eq!(result.errors().errors().len(), 1);
