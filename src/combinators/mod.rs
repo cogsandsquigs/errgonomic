@@ -1,4 +1,5 @@
 //! All the parser combinators you can use.
+//!
 //! NOTE: When using parsers, if you have yet to use/encounter a custom error, the parser (tries
 //! to) default to `()` as the `CustomError`. However, this may need to be specified when using
 //! parser combinators. So, specify the error type when using combinators if you don't have a
