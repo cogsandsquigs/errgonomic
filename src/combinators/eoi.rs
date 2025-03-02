@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::{Error, Result},
+    errors::{CustomError, Error, Result},
     input::Underlying,
     state::State,
 };
@@ -8,9 +8,9 @@ use crate::parser::{
 /// ```
 /// # use errgonomic::combinators::eoi;
 /// # use errgonomic::parser::Parser;
-/// assert_eq!(eoi.parse("").unwrap(), ());
+/// assert_eq!(eoi::<_, ()>.parse("").unwrap(), ());
 /// ```
-pub fn eoi<I: Underlying>(state: State<I>) -> Result<I, ()> {
+pub fn eoi<I: Underlying, E: CustomError>(state: State<I, E>) -> Result<I, (), E> {
     if state.input.is_empty() {
         Ok((state, ()))
     } else {

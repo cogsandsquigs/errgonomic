@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::{Error, Result},
+    errors::{CustomError, Error, Result},
     input::{Input, Underlying},
     state::State,
 };
@@ -8,17 +8,19 @@ use crate::parser::{
 ///```
 /// # use errgonomic::combinators::decimal;
 /// # use errgonomic::parser::Parser;
-/// let (state, parsed) = decimal.process("123abc".into()).unwrap();
+/// # use errgonomic::parser::state::State;
+/// # use errgonomic::parser::input::Input;
+/// let (state, parsed): (State<&str>, Input<&str>) = decimal.process("123abc".into()).unwrap();
 /// assert_eq!(parsed, "123");
 /// assert_eq!(state.as_input().as_inner(), "abc");
 ///```
-pub fn decimal<I: Underlying>(mut state: State<I>) -> Result<I, Input<I>> {
+pub fn decimal<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result<I, Input<I>, E> {
     let mut len = 1;
 
     // Make sure that we have at least one digit.
     if !state.input.take(len).is_decimal() {
         let found = state.input.take(len);
-        return Err(state.error(Error::ExpectedDecNumber { found }));
+        return Err(state.error(Error::ExpectedDec { found }));
     }
 
     loop {
@@ -38,22 +40,49 @@ pub fn decimal<I: Underlying>(mut state: State<I>) -> Result<I, Input<I>> {
     Ok((state, num))
 }
 
+/// Parses a decimal digit until it stops. If there is no decimal digit, returns an error.
+///```
+/// # use errgonomic::combinators::decimal_digit;
+/// # use errgonomic::parser::Parser;
+/// # use errgonomic::parser::state::State;
+/// # use errgonomic::parser::input::Input;
+/// let (state, parsed): (State<&str>, Input<&str>) = decimal_digit.process("123abc".into()).unwrap();
+/// assert_eq!(parsed, "1");
+/// assert_eq!(state.as_input().as_inner(), "23abc");
+///```
+pub fn decimal_digit<I: Underlying, E: CustomError>(
+    mut state: State<I, E>,
+) -> Result<I, Input<I>, E> {
+    let num = state.input.take(1);
+
+    if !num.is_decimal() {
+        return Err(state.error(Error::ExpectedDec { found: num }));
+    }
+
+    state.input = state.input.skip(1);
+    Ok((state, num))
+}
+
 /// Parses a hexadecimal number until it stops. If there is no hexadecimal number, returns an
 /// error.
 ///```
 /// # use errgonomic::combinators::hexadecimal;
 /// # use errgonomic::parser::Parser;
-/// let (state, parsed) = hexadecimal.process("123abcdefghi".into()).unwrap();
+/// # use errgonomic::parser::state::State;
+/// # use errgonomic::parser::input::Input;
+/// let (state, parsed): (State<&str>, Input<&str>) = hexadecimal.process("123abcdefghi".into()).unwrap();
 /// assert_eq!(parsed, "123abcdef");
 /// assert_eq!(state.as_input().as_inner(), "ghi");
 ///```
-pub fn hexadecimal<I: Underlying>(mut state: State<I>) -> Result<I, Input<I>> {
+pub fn hexadecimal<I: Underlying, E: CustomError>(
+    mut state: State<I, E>,
+) -> Result<I, Input<I>, E> {
     let mut len = 1;
 
     // Make sure that we have at least one digit.
     if !state.input.take(len).is_hex() {
         let found = state.input.take(len);
-        return Err(state.error(Error::ExpectedHexNumber { found }));
+        return Err(state.error(Error::ExpectedHex { found }));
     }
 
     loop {
@@ -70,6 +99,29 @@ pub fn hexadecimal<I: Underlying>(mut state: State<I>) -> Result<I, Input<I>> {
 
     let num = state.input.take(len);
     state.input = state.input.skip(len);
+    Ok((state, num))
+}
+
+/// Parses a hexadecimal digit until it stops. If there is no hexadecimal digit, returns an error.
+///```
+/// # use errgonomic::combinators::hexadecimal_digit;
+/// # use errgonomic::parser::Parser;
+/// # use errgonomic::parser::state::State;
+/// # use errgonomic::parser::input::Input;
+/// let (state, parsed): (State<&str>, Input<&str>) = hexadecimal_digit.process("123abcdefghi".into()).unwrap();
+/// assert_eq!(parsed, "1");
+/// assert_eq!(state.as_input().as_inner(), "23abcdefghi");
+///```
+pub fn hexadecimal_digit<I: Underlying, E: CustomError>(
+    mut state: State<I, E>,
+) -> Result<I, Input<I>, E> {
+    let num = state.input.take(1);
+
+    if !num.is_hex() {
+        return Err(state.error(Error::ExpectedHex { found: num }));
+    }
+
+    state.input = state.input.skip(1);
     Ok((state, num))
 }
 
@@ -97,7 +149,7 @@ mod tests {
         assert_eq!(result.errors().num_errors(), 1);
         assert_eq!(
             result.errors().errors()[0],
-            Error::ExpectedDecNumber {
+            Error::ExpectedDec {
                 found: Input::new_with_span("abc", (0..1).into())
             }
         );
@@ -120,7 +172,7 @@ mod tests {
         assert_eq!(result.errors().num_errors(), 1);
         assert_eq!(
             result.errors().errors()[0],
-            Error::ExpectedHexNumber {
+            Error::ExpectedHex {
                 found: Input::new_with_span("ghi", (0..1).into())
             }
         );

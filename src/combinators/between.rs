@@ -1,4 +1,4 @@
-use crate::parser::{input::Underlying, Parser};
+use crate::parser::{errors::CustomError, input::Underlying, Parser};
 
 /// Parses a parser between two other parsers. The first parser is the opening parser, the second
 /// is the parser to parse, and the third is the closing parser. The opening and closing parsers'
@@ -6,17 +6,20 @@ use crate::parser::{input::Underlying, Parser};
 ///```
 /// # use errgonomic::combinators::{between, decimal, is};
 /// # use errgonomic::parser::Parser;
-/// assert_eq!(between(is("("), decimal, is(")")).parse("(123)").unwrap(), "123");
+/// # use errgonomic::parser::input::Input;
+/// # use errgonomic::parser::state::State;
+/// let result = between(is::<_, ()>("("), decimal, is(")")).parse("(123)").unwrap();
+/// assert_eq!(result, "123");
 ///```
-pub fn between<I: Underlying, O1, O2, O3, P1, P2, P3>(
+pub fn between<I: Underlying, O1, O2, O3, E: CustomError, P1, P2, P3>(
     open: P1,
     parser: P2,
     close: P3,
-) -> impl Parser<I, O2>
+) -> impl Parser<I, O2, E>
 where
-    P1: Parser<I, O1>,
-    P2: Parser<I, O2>,
-    P3: Parser<I, O3>,
+    P1: Parser<I, O1, E>,
+    P2: Parser<I, O2, E>,
+    P3: Parser<I, O3, E>,
 {
     open.then(parser).then(close).map(|((_, o), _)| o)
 }

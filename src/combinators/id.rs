@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::Result,
+    errors::{CustomError, Result},
     input::{Input, Underlying},
     state::State,
 };
@@ -8,11 +8,13 @@ use crate::parser::{
 /// ```
 /// # use errgonomic::combinators::id;
 /// # use errgonomic::parser::Parser;
-/// let (state, parsed) = id.process("test".into()).unwrap();
+/// # use errgonomic::parser::input::Input;
+/// # use errgonomic::parser::state::State;
+/// let (state, parsed): (State<&str>, Input<&str>) = id.process("test".into()).unwrap();
 /// assert_eq!(parsed, "test");
 /// assert_eq!(state.as_input().as_inner(), "");
 /// ```
-pub fn id<I: Underlying>(mut state: State<I>) -> Result<I, Input<I>> {
+pub fn id<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result<I, Input<I>, E> {
     let input = state.input.fork();
     state.input = state.input.skip(state.input.len());
     Ok((state, input))

@@ -1,4 +1,9 @@
-use crate::parser::{errors::Result, input::Underlying, state::State, Parser};
+use crate::parser::{
+    errors::{CustomError, Result},
+    input::Underlying,
+    state::State,
+    Parser,
+};
 
 /// Parses as many of the given parser as possible. At the first error, returns all the parsed
 /// output that happened before the error. If it errors out on the first parser, it will return
@@ -6,12 +11,16 @@ use crate::parser::{errors::Result, input::Underlying, state::State, Parser};
 ///```
 /// # use errgonomic::combinators::{many, is};
 /// # use errgonomic::parser::Parser;
-/// let (state, parsed) = many(is("hello")).process("hellohellohello, world!".into()).unwrap();
+/// # use errgonomic::parser::state::State;
+/// # use errgonomic::parser::input::Input;
+/// let (state, parsed): (State<&str>, Vec<Input<&str>>) = many(is("hello")).process("hellohellohello, world!".into()).unwrap();
 /// assert_eq!(parsed, vec!["hello", "hello", "hello"]);
 /// assert_eq!(state.as_input().as_inner(), ", world!");
 ///```
-pub fn many<I: Underlying, O, P: Parser<I, O>>(mut p: P) -> impl Parser<I, Vec<O>> {
-    move |mut state: State<I>| -> Result<I, Vec<O>> {
+pub fn many<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
+    mut p: P,
+) -> impl Parser<I, Vec<O>, E> {
+    move |mut state: State<I, E>| -> Result<I, Vec<O>, E> {
         let mut results = Vec::new();
 
         while let Ok((new_state, o)) = p.process(state.fork()) {
@@ -29,16 +38,26 @@ pub fn many<I: Underlying, O, P: Parser<I, O>>(mut p: P) -> impl Parser<I, Vec<O
 ///```
 /// # use errgonomic::combinators::{many_until, is};
 /// # use errgonomic::parser::Parser;
-/// let (state, parsed) = many_until(is("hello"), is(", world!")).process("hellohellohello, world! Hi!".into()).unwrap();
+/// # use errgonomic::parser::state::State;
+/// # use errgonomic::parser::input::Input;
+/// let (state, parsed): (State<&str>, (Vec<Input<&str>>, Input<&str>))
+///     = many_until(is("hello"), is(", world!")).process("hellohellohello, world! Hi!".into()).unwrap();
 /// assert_eq!(parsed.0, vec!["hello", "hello", "hello"]);
 /// assert_eq!(parsed.1, ", world!");
 /// assert_eq!(state.as_input().as_inner(), " Hi!");
 ///```
-pub fn many_until<I: Underlying, O1, O2, P1: Parser<I, O1>, P2: Parser<I, O2>>(
+pub fn many_until<
+    I: Underlying,
+    O1,
+    O2,
+    E: CustomError,
+    P1: Parser<I, O1, E>,
+    P2: Parser<I, O2, E>,
+>(
     mut p: P1,
     mut until: P2,
-) -> impl Parser<I, (Vec<O1>, O2)> {
-    move |mut state: State<I>| -> Result<I, (Vec<O1>, O2)> {
+) -> impl Parser<I, (Vec<O1>, O2), E> {
+    move |mut state: State<I, E>| -> Result<I, (Vec<O1>, O2), E> {
         let mut results = Vec::new();
 
         loop {
@@ -87,7 +106,7 @@ mod tests {
 
     #[test]
     fn can_parse_many_until() {
-        let result = super::many_until(is("test"), is("123"))
+        let result = super::many_until(is::<_, ()>("test"), is("123"))
             .process("testtest123".into())
             .unwrap();
 

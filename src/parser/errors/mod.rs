@@ -1,3 +1,5 @@
+use core::fmt;
+
 use super::{
     input::{Input, Underlying},
     state::State,
@@ -6,19 +8,27 @@ use super::{
 /// The result type for the parser.
 /// NOTE: This will always return a `State` since we may want to continue parsing even if an error
 /// has occurred. It is just that the `Ok` variant will contain the result of the parsing.
-pub type Result<I, O> = core::result::Result<(State<I>, O), State<I>>;
+pub type Result<I, O, E = ()> = core::result::Result<(State<I, E>, O), State<I, E>>;
 
 /// The error type for the parser.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Errors<I: Underlying> {
+pub struct Errors<I, E = ()>
+where
+    I: Underlying,
+    E: CustomError,
+{
     /// The source of the input that produced the errors.
     source: Input<I>,
 
     /// All the errors that occurred during parsing.
-    errors: Vec<Error<I>>,
+    errors: Vec<Error<I, E>>,
 }
 
-impl<I: Underlying> Errors<I> {
+impl<I, E> Errors<I, E>
+where
+    I: Underlying,
+    E: CustomError,
+{
     /// Create a new `Errors` object.
     pub fn new(source: Input<I>) -> Self {
         Self {
@@ -38,19 +48,23 @@ impl<I: Underlying> Errors<I> {
     }
 
     /// Returns the errors.
-    pub fn errors(&self) -> &[Error<I>] {
+    pub fn errors(&self) -> &[Error<I, E>] {
         &self.errors
     }
 
     /// Appends an error to the list of errors.
-    pub fn push(&mut self, error: Error<I>) {
+    pub fn push(&mut self, error: Error<I, E>) {
         self.errors.push(error);
     }
 }
 
 /// Any possible errors that could have occurred during parsing.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Error<I: Underlying> {
+pub enum Error<I, E = ()>
+where
+    I: Underlying,
+    E: CustomError,
+{
     /// Expected a specific thing, but didn't get it.
     /// NOTE: `expected` should be the expected input, and `found` should be the remaining input.
     Expected { expected: I, found: Input<I> },
@@ -59,10 +73,10 @@ pub enum Error<I: Underlying> {
     FoundEOI { expected: I, eoi_at: Input<I> },
 
     /// Expected a number, but found something else.
-    ExpectedDecNumber { found: Input<I> },
+    ExpectedDec { found: Input<I> },
 
     /// Expected a hexidecimal number, but found something else.
-    ExpectedHexNumber { found: Input<I> },
+    ExpectedHex { found: Input<I> },
 
     /// Expected alphabetic characters, but found something else.
     ExpectedAlpha { found: Input<I> },
@@ -73,4 +87,11 @@ pub enum Error<I: Underlying> {
     /// Expected the end of input, but didn't get it.
     /// NOTE: `found` should be the remaining input.
     ExpectedEOI { found: Input<I> },
+
+    /// A custom error
+    Custom { err: E, at: Input<I> },
 }
+
+pub trait CustomError: fmt::Debug + PartialEq + Eq + Clone {}
+
+impl CustomError for () {}

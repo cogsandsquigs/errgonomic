@@ -1,6 +1,6 @@
 [package]
     name        = "errgonomic"
     version     = "0.1.0"
-    edition     = "2021"
+    edition     = "2024"
     authors     = ["Ian Pratt <ianjdpratt@gmail.com>"]
     description = "A simple, powerful, and fun combinator parsing library for Rust."

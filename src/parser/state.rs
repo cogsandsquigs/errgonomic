@@ -1,21 +1,29 @@
 use super::{
-    errors::{Error, Errors},
+    errors::{CustomError, Error, Errors},
     input::{Input, Underlying},
 };
 
 /// The parser state.
 #[derive(Debug)]
-pub struct State<I: Underlying> {
+pub struct State<I, E = ()>
+where
+    I: Underlying,
+    E: CustomError,
+{
     /// The input we are currently parsing.
     /// NOTE: Only public to this library, as we don't want the user directly manipulating the
     /// input.
     pub(crate) input: Input<I>,
 
     /// Any errors that occurred during parsing.
-    errors: Errors<I>,
+    errors: Errors<I, E>,
 }
 
-impl<I: Underlying> State<I> {
+impl<I, E> State<I, E>
+where
+    I: Underlying,
+    E: CustomError,
+{
     /// Create a new `State` object.
     pub fn new(input: I) -> Self {
         let input = Input::new(input);
@@ -27,12 +35,12 @@ impl<I: Underlying> State<I> {
     }
 
     /// Get the errors that occurred during parsing.
-    pub fn errors(&self) -> &Errors<I> {
+    pub fn errors(&self) -> &Errors<I, E> {
         &self.errors
     }
 
     /// Append an error to the list of errors.
-    pub fn error(mut self, error: Error<I>) -> Self {
+    pub fn error(mut self, error: Error<I, E>) -> Self {
         self.errors.push(error);
         self
     }
@@ -63,9 +71,10 @@ where
     }
 }
 
-impl<I> From<I> for State<I>
+impl<I, E> From<I> for State<I, E>
 where
     I: Underlying,
+    E: CustomError,
 {
     fn from(input: I) -> Self {
         Self::new(input)

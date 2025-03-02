@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::Error,
+    errors::{CustomError, Error},
     input::{Input, Underlying},
     state::State,
     Parser,
@@ -14,14 +14,14 @@ use crate::parser::{
 /// ```
 /// # use errgonomic::combinators::is;
 /// # use errgonomic::parser::Parser;
-/// let (state, parsed) = is("te").process("test".into()).unwrap();
+/// # use errgonomic::parser::input::Input;
+/// # use errgonomic::parser::state::State;
+/// let (state, parsed): (State<&str>, Input<&str>) = is("te").process("test".into()).unwrap();
 /// assert_eq!(parsed, "te");
 /// assert_eq!(state.as_input().as_inner(), "st");
 /// ```
-pub fn is<I: Underlying>(matches: I) -> impl Parser<I, Input<I>> {
-    // Is { matches }
-    //
-    move |mut state: State<I>| {
+pub fn is<I: Underlying, E: CustomError>(matches: I) -> impl Parser<I, Input<I>, E> {
+    move |mut state: State<I, E>| {
         if state.input.len() < matches.len() {
             state.input = state.input.skip(state.input.len());
             let input = state.input.fork();
@@ -65,7 +65,7 @@ mod tests {
         assert_eq!(result.0.errors().errors().len(), 0);
         assert_eq!(result.0.input, "123");
 
-        let result: Input<&str> = is("test").parse("test123").unwrap();
+        let result: Input<&str> = is::<_, ()>("test").parse("test123").unwrap();
         assert_eq!(result, "test");
 
         let result: State<&str> = is("test").process("123test".into()).unwrap_err();
