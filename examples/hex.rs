@@ -1,4 +1,4 @@
-use errgonomic::combinators::{hexadecimal_digit, is, maybe};
+use errgonomic::combinators::{eoi, hexadecimal_digit, is, many_m_n, maybe};
 use errgonomic::parser::errors::{CustomError, Result};
 use errgonomic::parser::state::State;
 use errgonomic::parser::Parser;
@@ -20,22 +20,29 @@ pub enum MyError {
 impl CustomError for MyError {}
 
 fn hex_color_channel(state: State<&str, MyError>) -> Result<&str, u8, MyError> {
-    hexadecimal_digit::<&str, MyError>
-        .then(hexadecimal_digit)
-        .map_result(|(digit_1, digit_2)| {
-            u8::from_str_radix(&(digit_1.as_inner().to_string() + digit_2.as_inner()), 16)
-                .map_err(MyError::ParseIntError) // NOTE: Not really needed as our input is
-                                                 // guaranteed to be a hexadecimal digit, but
-                                                 // it's nice to have error handling
+    many_m_n(2, 2, hexadecimal_digit)
+        .map_result(|digits| {
+            u8::from_str_radix(
+                &(digits
+                    .iter()
+                    .map(|s| s.as_inner())
+                    .collect::<Vec<_>>()
+                    .join("")),
+                16,
+            )
+            // NOTE: Not really needed as our input is guaranteed to be a hexadecimal digit, but
+            // it's nice to have error handling
+            .map_err(MyError::ParseIntError)
         })
         .process(state)
 }
 
 fn hex_color(state: State<&str, MyError>) -> Result<&str, Color, MyError> {
-    let (state, (((_, red), green), blue)) = maybe(is("#"))
+    let (state, ((((_, red), green), blue), _)) = maybe(is("#"))
         .then(hex_color_channel)
         .then(hex_color_channel)
         .then(hex_color_channel)
+        .then(eoi)
         .process(state)?;
 
     Ok((state, Color { red, green, blue }))
