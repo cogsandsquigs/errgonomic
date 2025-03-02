@@ -14,7 +14,9 @@ use crate::parser::{
 /// ```
 /// # use errgonomic::combinators::is;
 /// # use errgonomic::parser::Parser;
-/// assert_eq!(is("te").parse("test").unwrap(), "te");
+/// let (state, parsed) = is("te").process("test".into()).unwrap();
+/// assert_eq!(parsed, "te");
+/// assert_eq!(state.as_input().as_inner(), "st");
 /// ```
 pub fn is<I: Underlying>(matches: I) -> impl Parser<I, Input<I>> {
     // Is { matches }

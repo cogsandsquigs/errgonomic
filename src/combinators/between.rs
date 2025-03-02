@@ -3,6 +3,11 @@ use crate::parser::{input::Underlying, Parser};
 /// Parses a parser between two other parsers. The first parser is the opening parser, the second
 /// is the parser to parse, and the third is the closing parser. The opening and closing parsers'
 /// outputs are ignored.
+///```
+/// # use errgonomic::combinators::{between, decimal, is};
+/// # use errgonomic::parser::Parser;
+/// assert_eq!(between(is("("), decimal, is(")")).parse("(123)").unwrap(), "123");
+///```
 pub fn between<I: Underlying, O1, O2, O3, P1, P2, P3>(
     open: P1,
     parser: P2,

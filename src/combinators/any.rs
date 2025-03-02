@@ -2,6 +2,13 @@ use crate::parser::{errors::Result, input::Underlying, state::State, Parser};
 
 /// Parses any of the given parsers. The first parser that succeeds will be the output. Otherwise,
 /// if none of the parsers succeed, the error from the last parser will be returned.
+///```
+/// # use errgonomic::combinators::{any, is};
+/// # use errgonomic::parser::Parser;
+/// let (state, parsed) = any((is("hello"), is("world"))).process("hello, world!".into()).unwrap();
+/// assert_eq!(parsed, "hello");
+/// assert_eq!(state.as_input().as_inner(), ", world!");
+///```
 #[allow(private_bounds)]
 pub fn any<I: Underlying, O, L: List<I, O>>(mut ps: L) -> impl Parser<I, O> {
     move |state| ps.any(state)

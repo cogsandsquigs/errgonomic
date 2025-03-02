@@ -5,6 +5,13 @@ use crate::parser::{
 };
 
 /// Parses a decimal number until it stops. If there is no decimal number, returns an error.
+///```
+/// # use errgonomic::combinators::decimal;
+/// # use errgonomic::parser::Parser;
+/// let (state, parsed) = decimal.process("123abc".into()).unwrap();
+/// assert_eq!(parsed, "123");
+/// assert_eq!(state.as_input().as_inner(), "abc");
+///```
 pub fn decimal<I: Underlying>(mut state: State<I>) -> Result<I, Input<I>> {
     let mut len = 1;
 
@@ -33,6 +40,13 @@ pub fn decimal<I: Underlying>(mut state: State<I>) -> Result<I, Input<I>> {
 
 /// Parses a hexadecimal number until it stops. If there is no hexadecimal number, returns an
 /// error.
+///```
+/// # use errgonomic::combinators::hexadecimal;
+/// # use errgonomic::parser::Parser;
+/// let (state, parsed) = hexadecimal.process("123abcdefghi".into()).unwrap();
+/// assert_eq!(parsed, "123abcdef");
+/// assert_eq!(state.as_input().as_inner(), "ghi");
+///```
 pub fn hexadecimal<I: Underlying>(mut state: State<I>) -> Result<I, Input<I>> {
     let mut len = 1;
 
