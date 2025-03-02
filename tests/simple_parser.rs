@@ -10,7 +10,7 @@ fn test() {
                 .collect::<Vec<_>>()
                 .join(", ")
         })
-        .chain(is("hello, world!").map(|o| o.as_inner()));
+        .then(is("hello, world!").map(|o| o.as_inner()));
 
     let result = parser.parse("testtesttestdonehello, world!").unwrap();
     assert_eq!(result, ("test, test, test".into(), "hello, world!"));

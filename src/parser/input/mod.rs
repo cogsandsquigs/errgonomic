@@ -79,6 +79,16 @@ impl<I: Underlying> Input<I> {
         ))
     }
 
+    /// Checks if the input itself is a string of digits or not.
+    pub fn is_decimal(&self) -> bool {
+        self.underlying.slice(self.span).is_decimal()
+    }
+
+    /// Checks if the input is a hex
+    pub fn is_hex(&self) -> bool {
+        self.underlying.slice(self.span).is_hex()
+    }
+
     /// Returns the inner I.
     pub fn as_inner(&self) -> I {
         self.underlying.slice(self.span)

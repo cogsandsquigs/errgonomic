@@ -41,7 +41,7 @@ where
     }
 
     /// Applies two parsers in sequence. Returns the output of both parsers.
-    fn chain<O2, P2: Parser<I, O2>>(mut self, mut p2: P2) -> impl Parser<I, (O, O2)>
+    fn then<O2, P2: Parser<I, O2>>(mut self, mut p2: P2) -> impl Parser<I, (O, O2)>
     where
         Self: Sized,
     {

@@ -18,6 +18,12 @@ pub trait Underlying: PartialEq + Eq + Debug + Clone {
     /// should simply clone the reference. For types that are owned, it should clone the owned
     /// object.
     fn fork(&self) -> Self;
+
+    /// Checks if the input itself is a string of digits or not.
+    fn is_decimal(&self) -> bool;
+
+    /// Checks if the input is a hex
+    fn is_hex(&self) -> bool;
 }
 
 impl Underlying for &str {
@@ -32,6 +38,14 @@ impl Underlying for &str {
     fn fork(&self) -> Self {
         self
     }
+
+    fn is_decimal(&self) -> bool {
+        self.chars().all(|c| c.is_ascii_digit())
+    }
+
+    fn is_hex(&self) -> bool {
+        self.chars().all(|c| c.is_ascii_hexdigit())
+    }
 }
 
 impl Underlying for &[u8] {
@@ -45,5 +59,13 @@ impl Underlying for &[u8] {
 
     fn fork(&self) -> Self {
         self
+    }
+
+    fn is_decimal(&self) -> bool {
+        self.iter().all(|c| c.is_ascii_digit())
+    }
+
+    fn is_hex(&self) -> bool {
+        self.iter().all(|c| c.is_ascii_hexdigit())
     }
 }
