@@ -58,6 +58,18 @@ pub enum Error<I: Underlying> {
     /// Expected something, but found EOI.
     FoundEOI { expected: I, eoi_at: Input<I> },
 
+    /// Expected a number, but found something else.
+    ExpectedDecNumber { found: Input<I> },
+
+    /// Expected a hexidecimal number, but found something else.
+    ExpectedHexNumber { found: Input<I> },
+
+    /// Expected alphabetic characters, but found something else.
+    ExpectedAlpha { found: Input<I> },
+
+    /// Expected alphabetic or numeric characters, but found something else.
+    ExpectedAlphaNum { found: Input<I> },
+
     /// Expected the end of input, but didn't get it.
     /// NOTE: `found` should be the remaining input.
     ExpectedEOI { found: Input<I> },

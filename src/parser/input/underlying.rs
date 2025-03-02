@@ -40,11 +40,11 @@ impl Underlying for &str {
     }
 
     fn is_decimal(&self) -> bool {
-        self.chars().all(|c| c.is_ascii_digit())
+        self.is_ascii() && self.as_bytes().iter().all(|c| c.is_ascii_digit())
     }
 
     fn is_hex(&self) -> bool {
-        self.chars().all(|c| c.is_ascii_hexdigit())
+        self.is_ascii() && self.as_bytes().iter().all(|c| c.is_ascii_hexdigit())
     }
 }
 

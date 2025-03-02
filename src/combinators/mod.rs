@@ -6,6 +6,7 @@ mod eoi;
 mod id;
 mod is;
 mod many;
+mod numeric;
 
 pub use any::*;
 pub use between::*;
@@ -13,3 +14,4 @@ pub use eoi::*;
 pub use id::*;
 pub use is::*;
 pub use many::*;
+pub use numeric::*;
