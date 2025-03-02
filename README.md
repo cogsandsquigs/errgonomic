@@ -13,12 +13,25 @@ This is essentially a hobby crate for me, but it was designed to solve a few iss
 
 ## Features
 
-- **Usable and Fun**: I went into this project wanting to use it. Therefore, the primary goal is to be as usable as
+- **Usable and fun**: I went into this project wanting to use it. Therefore, the primary goal is to be as usable as
   possible and as easy to write parsers with as can be.
+- **Errors are first-class**: This library was built with errors in mind. Therefore, custom error types and other things
+  are supported outright. In the near (!) future, this library will have support for native error-recovery, including
+  panic- and statement-mode recoveries, making handling complex error cases a breeze!
 - **Dependency-Free**: By default, there are no dependencies in `errgonomic`. In the future, there will be a
-  feature-flag to link in `thiserror` and `miette` for better, more featureful results.
+  feature-flag to link in `thiserror` and `miette` for better, more featureful results, but that will, of course, be
+  optional.
 - **Fast**: While this isn't really that optimized, `errgonomic` uses immutable state and has minimal amounts
-  of `clone`-s, therefore making it faster. Plus, it is built in Rust ;).
+  of `clone`-s, therefore making it faster. Plus, it's built in Rust ;).
+
+## Pitfalls
+
+- **Primarily for strings**: I developed this library primarily to parse strings, and primarily to parse programming
+  languages. Therefore, certain applications are less-supported. _Technically_, binary is supported, but it's
+  effectively second-class.
+- **Types are annoying**: Due to the way certain things work, you may have to specify types outright for the parsers
+  (especially the custom-error type). This doesn't actually hinder parsing in any way, it just may make your source code
+  uglier in certain scenarios. See `errgonomic::combinators` for more information.
 
 ## Contributing
 
