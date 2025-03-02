@@ -8,18 +8,24 @@
 
 mod any;
 mod between;
+mod compare;
+mod consumed;
 mod eoi;
 mod id;
-mod is;
 mod many;
 mod maybe;
 mod numeric;
+mod separated;
+mod whitespace;
 
 pub use any::*;
 pub use between::*;
+pub use compare::*;
+pub use consumed::*;
 pub use eoi::*;
 pub use id::*;
-pub use is::*;
 pub use many::*;
 pub use maybe::*;
 pub use numeric::*;
+pub use separated::*;
+pub use whitespace::*;

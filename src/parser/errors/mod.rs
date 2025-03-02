@@ -72,6 +72,10 @@ where
     /// Expected something, but found EOI.
     FoundEOI { expected: I, eoi_at: Input<I> },
 
+    /// Expected the end of input, but didn't get it.
+    /// NOTE: `found` should be the remaining input.
+    ExpectedEOI { found: Input<I> },
+
     /// Expected a number, but found something else.
     ExpectedDec { found: Input<I> },
 
@@ -84,9 +88,14 @@ where
     /// Expected alphabetic or numeric characters, but found something else.
     ExpectedAlphaNum { found: Input<I> },
 
-    /// Expected the end of input, but didn't get it.
-    /// NOTE: `found` should be the remaining input.
-    ExpectedEOI { found: Input<I> },
+    /// Expected whitespace.
+    ExpectedWhitespace { found: Input<I> },
+
+    /// Expected newlines.
+    ExpectedNewline { found: Input<I> },
+
+    /// Did not expect sommething, but found it.
+    NotExpected { found: Input<I> },
 
     /// A custom error
     Custom { err: E, at: Input<I> },

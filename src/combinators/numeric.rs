@@ -18,24 +18,24 @@ pub fn decimal<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result<
     let mut len = 1;
 
     // Make sure that we have at least one digit.
-    if !state.input.take(len).is_decimal() {
-        let found = state.input.take(len);
+    if !state.input.fork().take(len).is_decimal() {
+        let found = state.input.fork().take(len);
         return Err(state.error(Error::ExpectedDec { found }));
     }
 
     loop {
         len += 1;
-        let num = state.input.take(len);
+        let num = state.input.fork().take(len);
 
         if !num.is_decimal() {
             len -= 1;
             break;
-        } else if len >= state.input.len() {
+        } else if len >= state.input.fork().len() {
             break;
         }
     }
 
-    let num = state.input.take(len);
+    let num = state.input.fork().take(len);
     state.input = state.input.skip(len);
     Ok((state, num))
 }
@@ -53,13 +53,13 @@ pub fn decimal<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result<
 pub fn decimal_digit<I: Underlying, E: CustomError>(
     mut state: State<I, E>,
 ) -> Result<I, Input<I>, E> {
-    let num = state.input.take(1);
+    let num = state.input.fork().take(1);
 
     if !num.is_decimal() {
         return Err(state.error(Error::ExpectedDec { found: num }));
     }
 
-    state.input = state.input.skip(1);
+    state.input = state.input.fork().skip(1);
     Ok((state, num))
 }
 
@@ -80,14 +80,14 @@ pub fn hexadecimal<I: Underlying, E: CustomError>(
     let mut len = 1;
 
     // Make sure that we have at least one digit.
-    if !state.input.take(len).is_hex() {
-        let found = state.input.take(len);
+    if !state.input.fork().take(len).is_hex() {
+        let found = state.input.fork().take(len);
         return Err(state.error(Error::ExpectedHex { found }));
     }
 
     loop {
         len += 1;
-        let num = state.input.take(len);
+        let num = state.input.fork().take(len);
 
         if !num.is_hex() {
             len -= 1;
@@ -97,7 +97,7 @@ pub fn hexadecimal<I: Underlying, E: CustomError>(
         }
     }
 
-    let num = state.input.take(len);
+    let num = state.input.fork().take(len);
     state.input = state.input.skip(len);
     Ok((state, num))
 }
@@ -115,13 +115,13 @@ pub fn hexadecimal<I: Underlying, E: CustomError>(
 pub fn hexadecimal_digit<I: Underlying, E: CustomError>(
     mut state: State<I, E>,
 ) -> Result<I, Input<I>, E> {
-    let num = state.input.take(1);
+    let num = state.input.fork().take(1);
 
     if !num.is_hex() {
         return Err(state.error(Error::ExpectedHex { found: num }));
     }
 
-    state.input = state.input.skip(1);
+    state.input = state.input.fork().skip(1);
     Ok((state, num))
 }
 

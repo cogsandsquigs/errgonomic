@@ -24,6 +24,15 @@ pub trait Underlying: PartialEq + Eq + Debug + Clone {
 
     /// Checks if the input is a hex
     fn is_hex(&self) -> bool;
+
+    /// Checks if the input is whitespace, but *not* newlines.
+    fn is_whitespace_not_newline(&self) -> bool;
+
+    /// Checks if the input is newlines, but *not* whitespace.
+    fn is_newline(&self) -> bool;
+
+    /// Checks if the input is whitespace, including newlines.
+    fn is_whitespace(&self) -> bool;
 }
 
 impl Underlying for &str {
@@ -46,6 +55,22 @@ impl Underlying for &str {
     fn is_hex(&self) -> bool {
         self.is_ascii() && self.as_bytes().iter().all(|c| c.is_ascii_hexdigit())
     }
+
+    fn is_whitespace_not_newline(&self) -> bool {
+        self.is_ascii()
+            && self
+                .as_bytes()
+                .iter()
+                .all(|c| c.is_ascii_whitespace() && !(*c == b'\n' || *c == b'\r'))
+    }
+
+    fn is_newline(&self) -> bool {
+        self.is_ascii() && self.as_bytes().iter().all(|c| *c == b'\n' || *c == b'\r')
+    }
+
+    fn is_whitespace(&self) -> bool {
+        self.is_ascii() && self.as_bytes().iter().all(|c| c.is_ascii_whitespace())
+    }
 }
 
 impl Underlying for &[u8] {
@@ -67,5 +92,18 @@ impl Underlying for &[u8] {
 
     fn is_hex(&self) -> bool {
         self.iter().all(|c| c.is_ascii_hexdigit())
+    }
+
+    fn is_whitespace_not_newline(&self) -> bool {
+        self.iter()
+            .all(|c| c.is_ascii_whitespace() && !(*c == b'\n' || *c == b'\r'))
+    }
+
+    fn is_newline(&self) -> bool {
+        self.iter().all(|c| *c == b'\n' || *c == b'\r')
+    }
+
+    fn is_whitespace(&self) -> bool {
+        self.iter().all(|c| c.is_ascii_whitespace())
     }
 }

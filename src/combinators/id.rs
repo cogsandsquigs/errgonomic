@@ -16,7 +16,7 @@ use crate::parser::{
 /// ```
 pub fn id<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result<I, Input<I>, E> {
     let input = state.input.fork();
-    state.input = state.input.skip(state.input.len());
+    state.input = state.input.fork().skip(state.input.len());
     Ok((state, input))
 }
 
