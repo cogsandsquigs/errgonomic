@@ -1,10 +1,9 @@
-use std::num::ParseIntError;
-
 use errgonomic::combinators::{hexadecimal_digit, is};
 use errgonomic::parser::errors::{CustomError, Error, Result};
 use errgonomic::parser::input::Input;
 use errgonomic::parser::state::State;
 use errgonomic::parser::Parser;
+use std::num::ParseIntError;
 
 #[derive(Debug, PartialEq)]
 pub struct Color {
