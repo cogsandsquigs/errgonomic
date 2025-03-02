@@ -1,12 +1,10 @@
 pub mod errors;
 pub mod input;
-mod mappings;
 pub mod span;
 pub mod state;
 
 use errors::{Errors, Result};
 use input::Underlying;
-use mappings::{Chain, Map};
 use state::State;
 
 /// The parser trait. Used to parse input.
@@ -31,19 +29,28 @@ where
     }
 
     /// Processes the output of the parser with a function.
-    fn map<O2, F: Fn(O) -> O2>(self, f: F) -> Map<I, O, Self, F, O2>
+    fn map<O2, F: Fn(O) -> O2>(mut self, f: F) -> impl Parser<I, O2>
+    // Map<I, O, Self, F, O2>
     where
         Self: Sized,
     {
-        Map::new(self, f)
+        move |state: State<I>| {
+            self.process(state)
+                .map(|(state, output)| (state, f(output)))
+        }
     }
 
     /// Applies two parsers in sequence. Returns the output of both parsers.
-    fn chain<O2, P2: Parser<I, O2>>(self, p2: P2) -> mappings::Chain<I, O, O2, Self, P2>
+    fn chain<O2, P2: Parser<I, O2>>(mut self, mut p2: P2) -> impl Parser<I, (O, O2)>
     where
         Self: Sized,
     {
-        Chain::new(self, p2)
+        move |state: State<I>| {
+            self.process(state).and_then(|(state, output1)| {
+                p2.process(state)
+                    .map(|(state, output2)| (state, (output1, output2)))
+            })
+        }
     }
 }
 
