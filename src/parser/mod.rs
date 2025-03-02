@@ -68,6 +68,29 @@ where
         }
     }
 
+    /// Processes both the output and state of the parser with a function.
+    ///
+    /// NOTE: Passes the state as the first argument and the output as the second.
+    /// NOTE: The state is owned by the function, so it can be mutated. However, this means the
+    /// function needs to return the state as well in a tuple with the state and output.
+    ///
+    /// ```
+    /// # use errgonomic::combinators::decimal;
+    /// # use errgonomic::parser::Parser;
+    /// # use errgonomic::parser::input::Input;
+    /// let parsed = decimal::<_, ()>.map(|o: Input<&str>| o.as_inner().parse::<u32>().unwrap()).parse("123").unwrap();
+    /// assert_eq!(parsed, 123);
+    /// ```
+    fn map_with_state<O2, F: Fn(State<I, E>, O) -> (State<I, E>, O2)>(
+        mut self,
+        f: F,
+    ) -> impl Parser<I, O2, E>
+    where
+        Self: Sized,
+    {
+        move |state: State<I, E>| self.process(state).map(|(state, output)| f(state, output))
+    }
+
     /// Like `map`, but processes the output with a function that returns a (std) `Result`. If it's
     /// `Ok`, parsing continues as normal. If it's `Err`, the error is returned.
     fn map_result<O2, F: Fn(O) -> core::result::Result<O2, E>>(
