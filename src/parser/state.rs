@@ -7,7 +7,9 @@ use super::{
 #[derive(Debug)]
 pub struct State<I: Underlying> {
     /// The input we are currently parsing.
-    pub input: Input<I>,
+    /// NOTE: Only public to this library, as we don't want the user directly manipulating the
+    /// input.
+    pub(crate) input: Input<I>,
 
     /// Any errors that occurred during parsing.
     errors: Errors<I>,
@@ -41,6 +43,11 @@ impl<I: Underlying> State<I> {
             errors: self.errors.clone(),
             input: self.input.fork(),
         }
+    }
+
+    /// Gets the input.
+    pub fn as_input(&self) -> &Input<I> {
+        &self.input
     }
 }
 

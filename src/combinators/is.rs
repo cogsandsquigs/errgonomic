@@ -20,10 +20,11 @@ pub struct Is<I: Underlying> {
 impl<I: Underlying> Parser<I, Input<I>> for Is<I> {
     fn process(&mut self, mut state: State<I>) -> Result<I, Input<I>> {
         if state.input.len() < self.matches.len() {
+            state.input = state.input.skip(state.input.len());
             let input = state.input.fork();
-            return Err(state.error(Error::Expected {
+            return Err(state.error(Error::FoundEOI {
                 expected: self.matches.clone(),
-                found: input,
+                eoi_at: input,
             }));
         }
 
@@ -82,9 +83,9 @@ mod tests {
         assert_eq!(result.errors().errors().len(), 1);
         assert_eq!(
             result.errors().errors()[0],
-            crate::parser::errors::Error::Expected {
+            crate::parser::errors::Error::FoundEOI {
                 expected: "test",
-                found: Input::new_with_span("te", (0..2).into())
+                eoi_at: Input::new_with_span("te", (2..2).into())
             }
         );
     }

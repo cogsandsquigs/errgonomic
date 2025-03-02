@@ -78,6 +78,11 @@ impl<I: Underlying> Input<I> {
             self.span.tail,
         ))
     }
+
+    /// Returns the inner I.
+    pub fn as_inner(&self) -> I {
+        self.underlying.slice(self.span)
+    }
 }
 
 impl<I: Underlying> PartialEq<I> for Input<I> {

@@ -55,6 +55,9 @@ pub enum Error<I: Underlying> {
     /// NOTE: `expected` should be the expected input, and `found` should be the remaining input.
     Expected { expected: I, found: Input<I> },
 
+    /// Expected something, but found EOI.
+    FoundEOI { expected: I, eoi_at: Input<I> },
+
     /// Expected the end of input, but didn't get it.
     /// NOTE: `found` should be the remaining input.
     ExpectedEOI { found: Input<I> },
