@@ -2,6 +2,7 @@ use crate::parser::{errors::Result, input::Underlying, state::State, Parser};
 
 /// Parses any of the given parsers. The first parser that succeeds will be the output. Otherwise,
 /// if none of the parsers succeed, the error from the last parser will be returned.
+#[allow(private_bounds)]
 pub fn any<I: Underlying, O, L: List<I, O>>(mut ps: L) -> impl Parser<I, O> {
     move |state| ps.any(state)
 }
@@ -64,7 +65,7 @@ where
 /* TRAIT IMPLEMENTATIONS NEEDED FOR ANY */
 /* These are annoying and long, you can ignore*/
 
-pub trait List<I: Underlying, O> {
+trait List<I: Underlying, O> {
     fn any(&mut self, state: State<I>) -> Result<I, O>;
 }
 

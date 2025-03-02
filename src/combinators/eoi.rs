@@ -5,6 +5,11 @@ use crate::parser::{
 };
 
 /// Parses an end of input.
+/// ```
+/// # use errgonomic::combinators::eoi;
+/// # use errgonomic::parser::Parser;
+/// assert_eq!(eoi.parse("").unwrap(), ());
+/// ```
 pub fn eoi<I: Underlying>(state: State<I>) -> Result<I, ()> {
     if state.input.is_empty() {
         Ok((state, ()))

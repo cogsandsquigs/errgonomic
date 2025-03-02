@@ -1,3 +1,5 @@
+//! All the parser combinators you can use.
+
 mod eoi;
 mod id;
 mod is;

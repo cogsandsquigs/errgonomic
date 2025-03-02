@@ -1,3 +1,5 @@
+//! The parser types. This dictates how the parser is used and how it should be ran.
+
 pub mod errors;
 pub mod input;
 pub mod span;
@@ -30,7 +32,6 @@ where
 
     /// Processes the output of the parser with a function.
     fn map<O2, F: Fn(O) -> O2>(mut self, f: F) -> impl Parser<I, O2>
-    // Map<I, O, Self, F, O2>
     where
         Self: Sized,
     {
@@ -50,6 +51,18 @@ where
                 p2.process(state)
                     .map(|(state, output2)| (state, (output1, output2)))
             })
+        }
+    }
+
+    /// Applies a secondary parser depending on the output generated from the first. Like `then`,
+    /// but more general and dependent on the output of the first parser.
+    fn chain<O2, P2: Parser<I, O2>, F: Fn(O) -> P2>(mut self, f: F) -> impl Parser<I, O2>
+    where
+        Self: Sized,
+    {
+        move |state: State<I>| {
+            self.process(state)
+                .and_then(|(state, output)| f(output).process(state))
         }
     }
 }

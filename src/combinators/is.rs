@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::{Error, Result},
+    errors::Error,
     input::{Input, Underlying},
     state::State,
     Parser,
@@ -7,35 +7,36 @@ use crate::parser::{
 
 /// Parses an input if it matches the given input. If it does, it returns the input.
 /// If not, it errors out.
+///
 /// NOTE: This only matches up to the length of the matching string. If there is more input
 /// after the matching string, it will be left in the parser state.
-pub fn is<I: Underlying>(matches: I) -> Is<I> {
-    Is { matches }
-}
-
-pub struct Is<I: Underlying> {
-    matches: I,
-}
-
-impl<I: Underlying> Parser<I, Input<I>> for Is<I> {
-    fn process(&mut self, mut state: State<I>) -> Result<I, Input<I>> {
-        if state.input.len() < self.matches.len() {
+///
+/// ```
+/// # use errgonomic::combinators::is;
+/// # use errgonomic::parser::Parser;
+/// assert_eq!(is("te").parse("test").unwrap(), "te");
+/// ```
+pub fn is<I: Underlying>(matches: I) -> impl Parser<I, Input<I>> {
+    // Is { matches }
+    //
+    move |mut state: State<I>| {
+        if state.input.len() < matches.len() {
             state.input = state.input.skip(state.input.len());
             let input = state.input.fork();
             return Err(state.error(Error::FoundEOI {
-                expected: self.matches.clone(),
+                expected: matches.clone(),
                 eoi_at: input,
             }));
         }
 
-        let grabbed = state.input.take(self.matches.len());
+        let grabbed = state.input.take(matches.len());
 
-        if grabbed == self.matches {
-            state.input = state.input.skip(self.matches.len());
+        if grabbed == matches {
+            state.input = state.input.skip(matches.len());
             Ok((state, grabbed))
         } else {
             Err(state.error(Error::Expected {
-                expected: self.matches.clone(),
+                expected: matches.clone(),
                 found: grabbed,
             }))
         }
