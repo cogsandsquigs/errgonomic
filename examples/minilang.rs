@@ -1,83 +1,134 @@
+//! This shows how you can parse a minature language with `errgonomic`.
+
 use std::{
     fmt,
     io::{stdin, stdout, Write},
 };
 
 use errgonomic::{
-    combinators::{any, between, decimal, is, separated, whitespace_wrapped as ww},
-    parser::{errors::Result, input::Input, state::State, Parser},
+    combinators::{any, between, decimal, is, maybe, whitespace, whitespace_wrapped as ww},
+    parser::{
+        errors::{CustomError, Error, Result},
+        input::Input,
+        state::State,
+        Parser,
+    },
 };
 
-#[derive(Debug)]
-pub struct Value<'a> {
-    v: ValueInner<'a>,
-    s: Input<&'a str>,
+enum Expression {
+    Number(i32),
+    Operation {
+        operator: Operator,
+        left: Box<Expression>,
+        right: Box<Expression>,
+    },
 }
 
-impl<'a> Value<'a> {
-    pub fn new(v: ValueInner<'a>, s: Input<&'a str>) -> Self {
-        Self { v, s }
+impl Expression {
+    fn eval(&self) -> i32 {
+        match self {
+            Self::Number(n) => *n,
+            Self::Operation {
+                operator,
+                left,
+                right,
+            } => match operator {
+                Operator::Add => left.eval() + right.eval(),
+                Operator::Sub => left.eval() - right.eval(),
+                Operator::Mul => left.eval() * right.eval(),
+                Operator::Div => left.eval() / right.eval(),
+            },
+        }
     }
 }
 
-#[derive(Debug)]
-pub enum ValueInner<'a> {
-    Number(i32),
-    List(Vec<Value<'a>>),
+enum Operator {
+    Add,
+    Sub,
+    Mul,
+    Div,
 }
 
-impl fmt::Display for ValueInner<'_> {
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum ParseError {
+    InvalidOperator,
+}
+
+impl CustomError for ParseError {}
+
+impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Number(n) => write!(f, "{}", n),
-            Self::List(l) => {
-                write!(f, "[")?;
-                for (i, v) in l.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}", v)?;
-                }
-                write!(f, "]")
+            Self::Operation {
+                operator,
+                left,
+                right,
+            } => {
+                write!(f, "({} {} {})", operator, left, right)
             }
         }
     }
 }
 
-impl fmt::Display for Value<'_> {
+impl fmt::Display for Operator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.v)
+        match self {
+            Self::Add => write!(f, "+"),
+            Self::Sub => write!(f, "-"),
+            Self::Mul => write!(f, "*"),
+            Self::Div => write!(f, "/"),
+        }
     }
 }
 
-fn number(state: State<&str>) -> Result<&str, Value> {
+fn number(state: State<&str, ParseError>) -> Result<&str, Expression, ParseError> {
     ww(decimal)
         // NOTE: See `examples/hex.rs` for why the `unwrap` is safe
-        .map(|n: Input<&str>| {
-            Value::new(ValueInner::Number(n.as_inner().parse::<i32>().unwrap()), n)
+        .map(|n: Input<&str>| Expression::Number(n.as_inner().parse::<i32>().unwrap()))
+        .process(state)
+}
+
+fn operator(state: State<&str, ParseError>) -> Result<&str, Operator, ParseError> {
+    ww(any((is("+"), is("-"), is("*"), is("/"))))
+        .map_res(|op: Input<&str>| {
+            Ok(match op.as_inner() {
+                "+" => Operator::Add,
+                "-" => Operator::Sub,
+                "*" => Operator::Mul,
+                "/" => Operator::Div,
+                _ => {
+                    return Err(ParseError::InvalidOperator);
+                }
+            })
         })
         .process(state)
 }
 
-fn list(state: State<&str>) -> Result<&str, Value> {
-    ww(between(
-        is("["),
-        separated(value, ww(is(",")), true),
-        is("]"),
+fn operation(state: State<&str, ParseError>) -> Result<&str, Expression, ParseError> {
+    let (state, (((op, left), _), right)) = between(
+        ww(is("(")),
+        operator.then(ww(value)).then(maybe(whitespace)).then(value),
+        ww(is(")")),
+    )
+    .process(state)?;
+
+    Ok((
+        state,
+        Expression::Operation {
+            operator: op,
+            left: Box::new(left),
+            right: Box::new(right),
+        },
     ))
-    .map_with_state(|state, vs| {
-        let input = state.as_input().fork();
-        (state, Value::new(ValueInner::List(vs), input))
-    })
-    .process(state)
 }
 
-fn value(state: State<&str>) -> Result<&str, Value> {
-    any((number, list)).process(state)
+fn value(state: State<&str, ParseError>) -> Result<&str, Expression, ParseError> {
+    any((number, operation)).process(state)
 }
 
-fn parser(state: State<&str>) -> Result<&str, Value> {
-    list.process(state)
+fn parser(state: State<&str, ParseError>) -> Result<&str, Expression, ParseError> {
+    value.process(state)
 }
 
 pub fn main() {
@@ -91,7 +142,7 @@ pub fn main() {
         stdin().read_line(&mut s).unwrap();
 
         match parser.parse(s.trim()) {
-            Ok(x) => println!("Parsed: {}", x),
+            Ok(x) => println!("{}", x.eval()),
             Err(err) => eprintln!("Error: {:?}", err),
         }
 

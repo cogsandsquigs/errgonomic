@@ -97,6 +97,9 @@ where
     /// Did not expect sommething, but found it.
     NotExpected { found: Input<I> },
 
+    /// Expected anything, but found nothing/EOI.
+    ExpectedAny { found: Input<I> },
+
     /// A custom error
     Custom { err: E, at: Input<I> },
 }

@@ -22,7 +22,7 @@ impl CustomError for MyError {}
 fn hex_color_channel(state: State<&str, MyError>) -> Result<&str, u8, MyError> {
     hexadecimal_digit::<&str, MyError>
         .then(hexadecimal_digit)
-        .map_result(|(digit_1, digit_2)| {
+        .map_res(|(digit_1, digit_2)| {
             u8::from_str_radix(&(digit_1.as_inner().to_string() + digit_2.as_inner()), 16)
                 .map_err(MyError::ParseIntError)
         })

@@ -93,10 +93,7 @@ where
 
     /// Like `map`, but processes the output with a function that returns a (std) `Result`. If it's
     /// `Ok`, parsing continues as normal. If it's `Err`, the error is returned.
-    fn map_result<O2, F: Fn(O) -> core::result::Result<O2, E>>(
-        mut self,
-        f: F,
-    ) -> impl Parser<I, O2, E>
+    fn map_res<O2, F: Fn(O) -> core::result::Result<O2, E>>(mut self, f: F) -> impl Parser<I, O2, E>
     where
         Self: Sized,
     {

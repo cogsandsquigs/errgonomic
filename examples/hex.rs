@@ -1,3 +1,6 @@
+//! This is a simple parser, which parses hexadecimal color codes. It is designed to show the
+//! difference between this parser combinator, and [`nom`](https://docs.rs/nom/latest/nom/#example).
+
 use errgonomic::combinators::{eoi, hexadecimal_digit, is, many_m_n, maybe};
 use errgonomic::parser::errors::{CustomError, Result};
 use errgonomic::parser::state::State;
@@ -21,7 +24,7 @@ impl CustomError for MyError {}
 
 fn hex_color_channel(state: State<&str, MyError>) -> Result<&str, u8, MyError> {
     many_m_n(2, 2, hexadecimal_digit)
-        .map_result(|digits| {
+        .map_res(|digits| {
             u8::from_str_radix(
                 &(digits
                     .iter()

@@ -16,6 +16,7 @@ mod many;
 mod maybe;
 mod numeric;
 mod separated;
+mod take;
 mod whitespace;
 
 pub use any::*;
@@ -28,4 +29,5 @@ pub use many::*;
 pub use maybe::*;
 pub use numeric::*;
 pub use separated::*;
+pub use take::*;
 pub use whitespace::*;

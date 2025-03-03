@@ -58,6 +58,24 @@ where
     }
 }
 
+impl<I, O, E, P1, P2, P3, P4> List<I, O, E> for (P1, P2, P3, P4)
+where
+    I: Underlying,
+    E: CustomError,
+    P1: Parser<I, O, E>,
+    P2: Parser<I, O, E>,
+    P3: Parser<I, O, E>,
+    P4: Parser<I, O, E>,
+{
+    fn any(&mut self, state: State<I, E>) -> Result<I, O, E> {
+        self.0
+            .process(state.fork())
+            .or_else(|_| self.1.process(state.fork()))
+            .or_else(|_| self.2.process(state.fork()))
+            .or_else(|_| self.3.process(state))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
