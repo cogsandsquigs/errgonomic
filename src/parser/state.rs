@@ -1,11 +1,11 @@
 use super::{
-    errors::{CustomError, Error, Errors},
+    errors::{CustomError, DummyError, Error, Errors},
     input::{Input, Underlying},
 };
 
 /// The parser state.
 #[derive(Debug)]
-pub struct State<I, E = ()>
+pub struct State<I, E = DummyError>
 where
     I: Underlying,
     E: CustomError,

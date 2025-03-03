@@ -5,12 +5,12 @@ pub mod input;
 pub mod span;
 pub mod state;
 
-use errors::{CustomError, Errors, Result};
+use errors::{CustomError, DummyError, Errors, Result};
 use input::Underlying;
 use state::State;
 
 /// The parser trait. Used to parse input.
-pub trait Parser<I, O, E = ()>
+pub trait Parser<I, O, E = DummyError>
 where
     I: Underlying,
     E: CustomError,
@@ -38,7 +38,8 @@ where
     /// # use errgonomic::parser::Parser;
     /// # use errgonomic::parser::state::State;
     /// # use errgonomic::parser::input::Input;
-    /// let parsed = id::<_, ()>.parse("test").unwrap();
+    /// # use errgonomic::parser::errors::DummyError;
+    /// let parsed = id::<_, DummyError>.parse("test").unwrap();
     /// assert_eq!(parsed, "test");
     /// ```
     fn parse(&mut self, input: I) -> core::result::Result<O, Errors<I, E>> {
@@ -55,7 +56,8 @@ where
     /// # use errgonomic::combinators::decimal;
     /// # use errgonomic::parser::Parser;
     /// # use errgonomic::parser::input::Input;
-    /// let parsed = decimal::<_, ()>.map(|o: Input<&str>| o.as_inner().parse::<u32>().unwrap()).parse("123").unwrap();
+    /// # use errgonomic::parser::errors::DummyError;
+    /// let parsed = decimal::<_, DummyError>.map(|o: Input<&str>| o.as_inner().parse::<u32>().unwrap()).parse("123").unwrap();
     /// assert_eq!(parsed, 123);
     /// ```
     fn map<O2, F: Fn(O) -> O2>(mut self, f: F) -> impl Parser<I, O2, E>
@@ -78,7 +80,8 @@ where
     /// # use errgonomic::combinators::decimal;
     /// # use errgonomic::parser::Parser;
     /// # use errgonomic::parser::input::Input;
-    /// let parsed = decimal::<_, ()>.map(|o: Input<&str>| o.as_inner().parse::<u32>().unwrap()).parse("123").unwrap();
+    /// # use errgonomic::parser::errors::DummyError;
+    /// let parsed = decimal::<_, DummyError>.map(|o: Input<&str>| o.as_inner().parse::<u32>().unwrap()).parse("123").unwrap();
     /// assert_eq!(parsed, 123);
     /// ```
     fn map_with_state<O2, F: Fn(State<I, E>, O) -> (State<I, E>, O2)>(
@@ -115,7 +118,8 @@ where
     /// ```
     /// # use errgonomic::combinators::{decimal, hexadecimal};
     /// # use errgonomic::parser::Parser;
-    /// let (first, second) = decimal::<_, ()>.then(hexadecimal).parse("123abc123").unwrap();
+    /// # use errgonomic::parser::errors::DummyError;
+    /// let (first, second) = decimal::<_, DummyError>.then(hexadecimal).parse("123abc123").unwrap();
     /// assert_eq!(first, "123");
     /// assert_eq!(second, "abc123");
     /// ```
@@ -139,7 +143,8 @@ where
     /// # use errgonomic::combinators::{decimal, hexadecimal, is, any};
     /// # use errgonomic::parser::Parser;
     /// # use errgonomic::parser::input::Input;
-    /// let parsed = any((is::<_, ()>("dec:"), is("hex:")))
+    /// # use errgonomic::parser::errors::DummyError;
+    /// let parsed = any((is::<_, DummyError>("dec:"), is("hex:")))
     ///                           .chain(|o: &Input<&str>| {
     ///                               if o.as_inner() == "dec:" {
     ///                                   decimal

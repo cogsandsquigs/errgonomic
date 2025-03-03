@@ -5,10 +5,11 @@ use crate::parser::{errors::CustomError, input::Underlying, state::State, Parser
 /// ```
 /// # use errgonomic::combinators::{maybe, is};
 /// # use errgonomic::parser::Parser;
-/// let parsed = maybe(is::<_, ()>("te")).parse("test").unwrap();
+/// # use errgonomic::parser::errors::DummyError;
+/// let parsed = maybe(is::<_, DummyError>("te")).parse("test").unwrap();
 /// assert_eq!(parsed.unwrap(), "te");
 ///
-/// let parsed = maybe(is::<_, ()>("st")).parse("test").unwrap();
+/// let parsed = maybe(is::<_, DummyError>("st")).parse("test").unwrap();
 /// assert_eq!(parsed, None);
 /// ```
 pub fn maybe<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
@@ -23,16 +24,18 @@ pub fn maybe<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::combinators::is;
+    use crate::{combinators::is, parser::input::Input};
 
     #[test]
     fn can_parse_maybe() {
-        let (state, parsed) = maybe(is::<_, ()>("te")).process("test".into()).unwrap();
+        let (state, parsed): (State<&str>, Option<Input<&str>>) =
+            maybe(is("te")).process("test".into()).unwrap();
         assert_eq!(parsed.unwrap(), "te");
         assert_eq!(state.as_input().as_inner(), "st");
         assert!(!state.errors().any_errs());
 
-        let (state, parsed) = maybe(is::<_, ()>("st")).process("test".into()).unwrap();
+        let (state, parsed): (State<&str>, Option<Input<&str>>) =
+            maybe(is("st")).process("test".into()).unwrap();
         assert_eq!(parsed, None);
         assert_eq!(state.as_input().as_inner(), "test");
         assert!(!state.errors().any_errs());

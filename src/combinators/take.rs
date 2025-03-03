@@ -21,8 +21,8 @@ use crate::parser::{
 pub fn take<I: Underlying, E: CustomError>(n: usize) -> impl Parser<I, Input<I>, E> {
     move |mut state: State<I, E>| {
         if state.input.len() < n {
-            let found = state.input.fork();
-            return Err(state.error(Error::ExpectedAny { found }));
+            let eoi_at = state.input.fork();
+            return Err(state.error(Error::ExpectedAny { eoi_at }));
         }
 
         let taken = state.input.fork().take(n);
@@ -56,7 +56,7 @@ mod tests {
         assert_eq!(
             state.errors().errors()[0],
             Error::ExpectedAny {
-                found: "hell".into()
+                eoi_at: "hell".into()
             }
         );
     }

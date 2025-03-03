@@ -8,7 +8,8 @@ use crate::parser::{
 /// ```
 /// # use errgonomic::combinators::eoi;
 /// # use errgonomic::parser::Parser;
-/// assert_eq!(eoi::<_, ()>.parse("").unwrap(), ());
+/// # use errgonomic::parser::errors::DummyError;
+/// assert_eq!(eoi::<_, DummyError>.parse("").unwrap(), ());
 /// ```
 pub fn eoi<I: Underlying, E: CustomError>(state: State<I, E>) -> Result<I, (), E> {
     if state.input.is_empty() {

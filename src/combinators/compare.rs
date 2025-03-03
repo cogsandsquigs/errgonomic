@@ -73,7 +73,7 @@ pub fn not<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::Parser;
+    use crate::parser::{errors::DummyError, Parser};
 
     #[test]
     fn can_parse_with_is() {
@@ -91,7 +91,7 @@ mod tests {
         assert_eq!(result.0.errors().errors().len(), 0);
         assert_eq!(result.0.input, "123");
 
-        let result: Input<&str> = is::<_, ()>("test").parse("test123").unwrap();
+        let result: Input<&str> = is::<_, DummyError>("test").parse("test123").unwrap();
         assert_eq!(result, "test");
 
         let result: State<&str> = is("test").process("123test".into()).unwrap_err();
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn can_parse_not() {
-        let state = not(is::<_, ()>("te")).process("test".into()).unwrap_err();
+        let state: State<&str> = not(is("te")).process("test".into()).unwrap_err();
         assert_eq!(state.as_input().as_inner(), "test");
         assert!(state.errors().any_errs());
         assert_eq!(state.errors().num_errors(), 1);
@@ -132,7 +132,7 @@ mod tests {
             }]
         );
 
-        let (state, _) = not(is::<_, ()>("st")).process("test".into()).unwrap();
+        let (state, _): (State<&str>, _) = not(is("st")).process("test".into()).unwrap();
         assert_eq!(state.as_input().as_inner(), "test");
         assert!(!state.errors().any_errs());
     }

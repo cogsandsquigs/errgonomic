@@ -16,7 +16,8 @@ use super::{between, maybe};
 /// # use errgonomic::parser::Parser;
 /// # use errgonomic::parser::input::Input;
 /// # use errgonomic::parser::state::State;
-/// let (state, parsed) = whitespace::<_, ()>.process("  \t\nabc".into()).unwrap();
+/// # use errgonomic::parser::errors::DummyError;
+/// let (state, parsed) = whitespace::<_, DummyError>.process("  \t\nabc".into()).unwrap();
 /// assert_eq!(parsed, "  \t\n");
 /// assert_eq!(state.as_input().as_inner(), "abc");
 /// ```
@@ -55,7 +56,8 @@ pub fn whitespace<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Resu
 /// # use errgonomic::parser::Parser;
 /// # use errgonomic::parser::input::Input;
 /// # use errgonomic::parser::state::State;
-/// let (state, parsed) = whitespace_not_newline::<_, ()>.process("  \t\nabc".into()).unwrap();
+/// # use errgonomic::parser::errors::DummyError;
+/// let (state, parsed) = whitespace_not_newline::<_, DummyError>.process("  \t\nabc".into()).unwrap();
 /// assert_eq!(parsed, "  \t");
 /// assert_eq!(state.as_input().as_inner(), "\nabc");
 /// ```
@@ -96,7 +98,8 @@ pub fn whitespace_not_newline<I: Underlying, E: CustomError>(
 /// # use errgonomic::parser::Parser;
 /// # use errgonomic::parser::input::Input;
 /// # use errgonomic::parser::state::State;
-/// let (state, parsed) = newlines::<_, ()>.process("\n\r\n  \t\nabc".into()).unwrap();
+/// # use errgonomic::parser::errors::DummyError;
+/// let (state, parsed) = newlines::<_, DummyError>.process("\n\r\n  \t\nabc".into()).unwrap();
 /// assert_eq!(parsed, "\n\r\n");
 /// assert_eq!(state.as_input().as_inner(), "  \t\nabc");
 /// ```
@@ -175,12 +178,14 @@ mod tests {
 
     #[test]
     fn can_parse_whitespace() {
-        let (state, parsed) = whitespace::<_, ()>.process("  \t\n".into()).unwrap();
+        let (state, parsed): (State<&str>, Input<&str>) =
+            whitespace.process("  \t\n".into()).unwrap();
         assert_eq!(parsed, "  \t\n");
         assert!(!state.errors().any_errs());
         assert_eq!(state.as_input().as_inner(), "");
 
-        let (state, parsed) = whitespace::<_, ()>.process("  \t\nabc".into()).unwrap();
+        let (state, parsed): (State<&str>, Input<&str>) =
+            whitespace.process("  \t\nabc".into()).unwrap();
         assert_eq!(parsed, "  \t\n");
         assert!(!state.errors().any_errs());
         assert_eq!(state.as_input().as_inner(), "abc");
@@ -188,9 +193,8 @@ mod tests {
 
     #[test]
     fn can_parse_whitespace_not_newline() {
-        let (state, parsed) = whitespace_not_newline::<_, ()>
-            .process("  \t\n".into())
-            .unwrap();
+        let (state, parsed): (State<&str>, Input<&str>) =
+            whitespace_not_newline.process("  \t\n".into()).unwrap();
         assert_eq!(parsed, "  \t");
         assert!(!state.errors().any_errs());
         assert_eq!(state.as_input().as_inner(), "\n");
@@ -198,7 +202,8 @@ mod tests {
 
     #[test]
     fn can_parse_newlines() {
-        let (state, parsed) = newlines::<_, ()>.process("\n\r\n  \t\n".into()).unwrap();
+        let (state, parsed): (State<&str>, Input<&str>) =
+            newlines.process("\n\r\n  \t\n".into()).unwrap();
         assert_eq!(parsed, "\n\r\n");
         assert!(!state.errors().any_errs());
         assert_eq!(state.as_input().as_inner(), "  \t\n");

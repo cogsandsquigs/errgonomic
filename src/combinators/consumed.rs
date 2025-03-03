@@ -25,7 +25,8 @@ mod tests {
 
     #[test]
     fn can_parse_consumed() {
-        let (state, parsed) = consumed(is::<_, ()>("te")).process("test".into()).unwrap();
+        let (state, parsed): (State<&str>, Input<&str>) =
+            consumed(is("te")).process("test".into()).unwrap();
         assert_eq!(parsed, "te");
         assert_eq!(state.as_input().as_inner(), "st");
         assert!(!state.errors().any_errs());

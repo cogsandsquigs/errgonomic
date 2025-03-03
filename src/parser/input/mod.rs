@@ -156,6 +156,13 @@ impl<I: Underlying> Input<I> {
     }
 }
 
+impl<'a, I: Underlying + 'a> Input<I> {
+    /// Returns a reference to the inner I.
+    pub fn as_inner_ref(&'a self) -> &'a I {
+        &self.underlying
+    }
+}
+
 impl<I: Underlying> PartialEq<I> for Input<I> {
     fn eq(&self, other: &I) -> bool {
         self.underlying.slice(self.span) == *other
@@ -173,3 +180,75 @@ impl<I: Underlying> From<I> for Input<I> {
         Self::new(underlying)
     }
 }
+
+/*
+#[cfg(feature = "fancy")]
+impl<I: Underlying> From<Input<I>> for miette::SourceSpan {
+    fn from(value: Input<I>) -> Self {
+        let underlying = value.as_inner();
+
+        Self::new(
+            miette::SourceOffset::from_location(
+                underlying.to_string(),
+                underlying.current_line_num(),
+                underlying.current_col_num(),
+            ),
+            underlying.len(),
+        )
+    }
+}
+
+#[cfg(feature = "fancy")]
+impl<I: Underlying> From<&Input<I>> for miette::SourceSpan {
+    fn from(value: &Input<I>) -> Self {
+        let underlying = value.as_inner();
+
+        Self::new(
+            miette::SourceOffset::from_location(
+                underlying.to_string(),
+                underlying.current_line_num(),
+                underlying.current_col_num(),
+            ),
+            underlying.len(),
+        )
+    }
+}
+
+
+#[cfg(feature = "fancy")]
+impl<I: Underlying> miette::SourceCode for Input<I> {
+    // TODO: Better error handling for when the span is out-of-range.
+    fn read_span<'a>(
+        &'a self,
+        span: &miette::SourceSpan,
+        context_lines_before: usize,
+        context_lines_after: usize,
+    ) -> Result<Box<dyn miette::SpanContents<'a> + 'a>, miette::MietteError> {
+        let source = self.as_inner();
+
+        todo!()
+    }
+}
+
+#[cfg(feature = "fancy")]
+impl<'a, I: Underlying + 'a> miette::SpanContents<'a> for Input<I> {
+    fn data(&self) -> &'a [u8] {
+        self.as_inner_ref().data()
+    }
+
+    fn span(&self) -> &miette::SourceSpan {
+        todo!()
+    }
+
+    fn line(&self) -> usize {
+        todo!()
+    }
+
+    fn column(&self) -> usize {
+        todo!()
+    }
+
+    fn line_count(&self) -> usize {
+        todo!()
+    }
+}*/

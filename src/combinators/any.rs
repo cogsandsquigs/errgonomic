@@ -81,12 +81,12 @@ mod tests {
     use super::*;
     use crate::{
         combinators::{id, is},
-        parser::input::Input,
+        parser::{errors::DummyError, input::Input},
     };
 
     #[test]
     fn can_parse_any() {
-        let result: (State<&str>, Input<&str>) = any::<_, _, (), _>((is("x"), is("test")))
+        let result: (State<&str>, Input<&str>) = any((is("x"), is("test")))
             .process("test123".into())
             .unwrap();
         assert_eq!(result.1, "test");
@@ -95,12 +95,12 @@ mod tests {
         assert_eq!(result.0.errors().errors().len(), 0);
         assert_eq!(result.0.input, "123");
 
-        let result: Input<&str> = any::<_, _, (), _>((id, is("test")))
+        let result: Input<&str> = any((id::<_, DummyError>, is("test")))
             .parse("test123")
             .unwrap();
         assert_eq!(result, "test123");
 
-        let result: State<&str> = any::<_, _, (), _>((is("done"), is("test")))
+        let result: State<&str> = any((is("done"), is("test")))
             .process("123test".into())
             .unwrap_err();
         assert!(result.errors().any_errs());

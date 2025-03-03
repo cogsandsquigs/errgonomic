@@ -8,7 +8,8 @@ use crate::parser::{errors::CustomError, input::Underlying, Parser};
 /// # use errgonomic::parser::Parser;
 /// # use errgonomic::parser::input::Input;
 /// # use errgonomic::parser::state::State;
-/// let result = between(is::<_, ()>("("), decimal, is(")")).parse("(123)").unwrap();
+/// # use errgonomic::parser::errors::DummyError;
+/// let result = between(is::<_, DummyError>("("), decimal, is(")")).parse("(123)").unwrap();
 /// assert_eq!(result, "123");
 ///```
 pub fn between<I: Underlying, O1, O2, O3, E: CustomError, P1, P2, P3>(

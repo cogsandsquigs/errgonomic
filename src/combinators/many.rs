@@ -39,15 +39,16 @@ pub fn many<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
 /// # use errgonomic::parser::Parser;
 /// # use errgonomic::parser::state::State;
 /// # use errgonomic::parser::input::Input;
-/// let (state, parsed) = many_n(1, is::<_, ()>("hello")).process("hellohello, world!".into()).unwrap();
+/// # use errgonomic::parser::errors::DummyError;
+/// let (state, parsed): (State<&str>, Vec<Input<&str>>) = many_n(1, is("hello")).process("hellohello, world!".into()).unwrap();
 /// assert_eq!(parsed, vec!["hello"]);
 /// assert_eq!(state.as_input().as_inner(), "hello, world!");
 ///
-/// let (state, parsed) = many_n(2, is::<_, ()>("hello")).process("hellohello, world!".into()).unwrap();
+/// let (state, parsed) = many_n(2, is::<_, DummyError>("hello")).process("hellohello, world!".into()).unwrap();
 /// assert_eq!(parsed, vec!["hello", "hello"]);
 /// assert_eq!(state.as_input().as_inner(), ", world!");
 ///
-/// let state = many_n(3, is::<_, ()>("hello")).process("hellohello, world!".into()).unwrap_err();
+/// let state = many_n(3, is::<_, DummyError>("hello")).process("hellohello, world!".into()).unwrap_err();
 /// assert!(state.errors().any_errs());
 /// assert_eq!(state.as_input().as_inner(), ", world!");
 ///```
@@ -80,19 +81,20 @@ pub fn many_n<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
 /// # use errgonomic::parser::Parser;
 /// # use errgonomic::parser::state::State;
 /// # use errgonomic::parser::input::Input;
-/// let state = many_m_n(1, 2, is::<_, ()>("hello")).process(", world!".into()).unwrap_err();
+/// # use errgonomic::parser::errors::DummyError;
+/// let state = many_m_n(1, 2, is::<_, DummyError>("hello")).process(", world!".into()).unwrap_err();
 /// assert!(state.errors().any_errs());
 /// assert_eq!(state.as_input().as_inner(), ", world!");
 ///
-/// let (state, parsed) = many_m_n(1, 2, is::<_, ()>("hello")).process("hello, world!".into()).unwrap();
+/// let (state, parsed) = many_m_n(1, 2, is::<_, DummyError>("hello")).process("hello, world!".into()).unwrap();
 /// assert_eq!(parsed, vec!["hello"]);
 /// assert_eq!(state.as_input().as_inner(), ", world!");
 ///
-/// let (state, parsed) = many_m_n(1, 2, is::<_, ()>("hello")).process("hellohello, world!".into()).unwrap();
+/// let (state, parsed) = many_m_n(1, 2, is::<_, DummyError>("hello")).process("hellohello, world!".into()).unwrap();
 /// assert_eq!(parsed, vec!["hello", "hello"]);
 /// assert_eq!(state.as_input().as_inner(), ", world!");
 ///
-/// let (state, parsed) = many_m_n(1, 2, is::<_, ()>("hello")).process("hellohellohello, world!".into()).unwrap();
+/// let (state, parsed) = many_m_n(1, 2, is::<_, DummyError>("hello")).process("hellohellohello, world!".into()).unwrap();
 /// assert_eq!(parsed, vec!["hello", "hello"]);
 /// assert_eq!(state.as_input().as_inner(), "hello, world!");
 ///```
@@ -236,7 +238,7 @@ mod tests {
 
     #[test]
     fn can_parse_many_m_n() {
-        let state = many_m_n(1, 2, is::<_, ()>("hello"))
+        let state: State<&str> = many_m_n(1, 2, is("hello"))
             .process(", world!".into())
             .unwrap_err();
         assert!(state.errors().any_errs());
@@ -249,21 +251,21 @@ mod tests {
             }
         );
 
-        let (state, parsed) = many_m_n(1, 2, is::<_, ()>("hello"))
+        let (state, parsed): (State<&str>, Vec<Input<&str>>) = many_m_n(1, 2, is("hello"))
             .process("hello, world!".into())
             .unwrap();
         assert_eq!(parsed, vec!["hello"]);
         assert!(!state.errors().any_errs());
         assert_eq!(state.as_input().as_inner(), ", world!");
 
-        let (state, parsed) = many_m_n(1, 2, is::<_, ()>("hello"))
+        let (state, parsed): (State<&str>, Vec<Input<&str>>) = many_m_n(1, 2, is("hello"))
             .process("hellohello, world!".into())
             .unwrap();
         assert_eq!(parsed, vec!["hello", "hello"]);
         assert!(!state.errors().any_errs());
         assert_eq!(state.as_input().as_inner(), ", world!");
 
-        let (state, parsed) = many_m_n(1, 2, is::<_, ()>("hello"))
+        let (state, parsed): (State<&str>, Vec<Input<&str>>) = many_m_n(1, 2, is("hello"))
             .process("hellohellohello, world!".into())
             .unwrap();
         assert_eq!(parsed, vec!["hello", "hello"]);
@@ -273,7 +275,7 @@ mod tests {
 
     #[test]
     fn can_parse_many_until() {
-        let result = super::many_until(is::<_, ()>("test"), is("123"))
+        let result: (State<&str>, (_, _)) = many_until(is("test"), is("123"))
             .process("testtest123".into())
             .unwrap();
 
