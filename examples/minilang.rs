@@ -85,7 +85,9 @@ impl fmt::Display for Operator {
 fn number(state: State<&str, ParseError>) -> Result<&str, Expression, ParseError> {
     ww(decimal)
         // NOTE: See `examples/hex.rs` for why the `unwrap` is safe
-        .map(|n: Input<&str>| Expression::Number(n.as_inner().parse::<i32>().unwrap()))
+        .map(|n: Input<&str>| {
+            Expression::Number(n.as_inner().parse::<i32>().expect("a valid number"))
+        })
         .process(state)
 }
 
