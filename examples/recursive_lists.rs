@@ -14,8 +14,9 @@ use errgonomic::{
 
 #[derive(Debug)]
 pub struct Value<'a> {
-    v: ValueInner<'a>,
+    #[allow(dead_code)]
     s: Input<&'a str>,
+    v: ValueInner<'a>,
 }
 
 impl<'a> Value<'a> {

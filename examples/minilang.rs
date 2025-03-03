@@ -8,7 +8,7 @@ use std::{
 use errgonomic::{
     combinators::{any, between, decimal, is, maybe, whitespace, whitespace_wrapped as ww},
     parser::{
-        errors::{CustomError, Error, Result},
+        errors::{CustomError, Result},
         input::Input,
         state::State,
         Parser,
