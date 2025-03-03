@@ -104,120 +104,12 @@ where
     Custom { err: E, at: Input<I> },
 }
 
-#[cfg(feature = "fancy")]
-impl<I, E> core::error::Error for Error<I, E>
-where
-    I: Underlying,
-    E: CustomError,
-{
-}
-
-#[cfg(feature = "fancy")]
-impl<I, E> fmt::Display for Error<I, E>
-where
-    I: Underlying,
-    E: CustomError,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Expected { expected, found } => write!(
-                f,
-                "Expected `{}`, but found `{}`",
-                expected,
-                found.as_inner()
-            ),
-            Self::FoundEOI {
-                expected,
-                eoi_at: _,
-            } => {
-                write!(f, "Expected `{}`, but found end-of-input", expected,)
-            }
-            Self::ExpectedEOI { found } => {
-                write!(f, "Expected end-of-input, but found `{}`", found.as_inner())
-            }
-            Self::ExpectedDec { found } => {
-                write!(
-                    f,
-                    "Expected a decimal number, but found `{}`",
-                    found.as_inner()
-                )
-            }
-            Self::ExpectedHex { found } => {
-                write!(
-                    f,
-                    "Expected a hexadecimal number, but found `{}`",
-                    found.as_inner()
-                )
-            }
-            Self::ExpectedAlpha { found } => {
-                write!(
-                    f,
-                    "Expected alphabetic characters, but found `{}`",
-                    found.as_inner()
-                )
-            }
-            Self::ExpectedAlphaNum { found } => {
-                write!(
-                    f,
-                    "Expected alphabetic or numeric characters, but found `{}`",
-                    found.as_inner()
-                )
-            }
-            Self::ExpectedWhitespace { found } => {
-                write!(f, "Expected whitespace, but found `{}`", found.as_inner())
-            }
-            Self::ExpectedNewline { found } => {
-                write!(f, "Expected newlines, but found `{}`", found.as_inner())
-            }
-            Self::NotExpected { found } => {
-                write!(f, "Did not expect `{}`, but found it", found.as_inner())
-            }
-            Self::ExpectedAny { eoi_at: _ } => {
-                write!(f, "Found end-of-input at")
-            }
-            Self::Custom { err, at: _ } => {
-                write!(f, "{}", err,)
-            }
-        }
-    }
-}
-
-/*
-#[cfg(feature = "fancy")]
-impl<I, E> miette::Diagnostic for Error<I, E>
-where
-    I: Underlying,
-    E: CustomError,
-{
-    fn labels(&self) -> Option<Box<dyn Iterator<Item = miette::LabeledSpan> + '_>> {
-        match self {
-            Self::Expected { expected, found } => Some(Box::new(std::iter::once(
-                miette::LabeledSpan::new_with_span(Some(format!("Expected {}", expected)), found),
-            ))),
-
-            _ => todo!("Need to add all the labels!"),
-        }
-    }
-}
-*/
-
-#[cfg(feature = "fancy")]
-pub trait CustomError:
-    fmt::Debug + PartialEq + Eq + Clone + core::error::Error + miette::Diagnostic
-{
-}
-
-#[cfg(not(feature = "fancy"))]
 pub trait CustomError: fmt::Debug + PartialEq + Eq + Clone {}
 
-#[cfg_attr(
-    feature = "fancy",
-    derive(Debug, PartialEq, Eq, Clone, miette::Diagnostic)
-)]
-#[cfg_attr(not(feature = "fancy"), derive(Debug, PartialEq, Eq, Clone))]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DummyError;
 
-impl CustomError for DummyError {}
+impl core::error::Error for DummyError {}
 
 impl fmt::Display for DummyError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -225,8 +117,4 @@ impl fmt::Display for DummyError {
     }
 }
 
-#[cfg(feature = "fancy")]
-impl core::error::Error for DummyError {}
-
-// #[cfg(feature = "fancy")]
-// impl miette::Diagnostic for DummyError {}
+impl CustomError for DummyError {}

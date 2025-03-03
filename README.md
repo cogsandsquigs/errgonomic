@@ -11,7 +11,7 @@ This is essentially a hobby crate for me, but it was designed to solve a few iss
 2. Error-handling in `nom` (the major Rust parser-combinator crate) is kind-of lacking.
 3. I wanted to build a parser-combinator that I can trust (because I wrote it!)
 
-## Features
+So, I built `errgonomic` with these core tenets in mind:
 
 - **Usable and fun**: I went into this project wanting to use it. Therefore, the primary goal is to be as usable as
   possible and as easy to write parsers with as can be.
@@ -24,7 +24,7 @@ This is essentially a hobby crate for me, but it was designed to solve a few iss
 - **Fast**: While this isn't really that optimized, `errgonomic` uses immutable state and has minimal amounts
   of `clone`-s, therefore making it faster. Plus, it's built in Rust ;).
 
-## Pitfalls
+### Pitfalls
 
 - **Primarily for strings**: I developed this library primarily to parse strings, and primarily to parse programming
   languages. Therefore, certain applications are less-supported. _Technically_, binary is supported, but it's
@@ -32,6 +32,14 @@ This is essentially a hobby crate for me, but it was designed to solve a few iss
 - **Types are annoying**: Due to the way certain things work, you may have to specify types outright for the parsers
   (especially the custom-error type). This doesn't actually hinder parsing in any way, it just may make your source code
   uglier in certain scenarios. See `errgonomic::combinators` for more information.
+
+## Feature-flags
+
+<!--
+- `fancy`: Enables support for `miette`, and enables `miette::Diagnostic` for `Error` and `Errors`. NOTE: Requires
+  anything implementing `CustomError` to implement `miette::Diagnostic` and `core::error::Error`. This also disables
+  support for parsing bytes, i.e. `[u8]`.WARN: This feature is not stable yet!
+-->
 
 ## Contributing
 
