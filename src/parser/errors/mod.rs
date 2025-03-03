@@ -104,6 +104,18 @@ where
     Custom { err: E, at: Input<I> },
 }
 
-pub trait CustomError: fmt::Debug + PartialEq + Eq + Clone {}
+pub trait CustomError:
+    fmt::Debug + PartialEq + Eq + Clone + core::error::Error + miette::Diagnostic
+{
+}
 
-impl CustomError for () {}
+#[derive(Debug, PartialEq, Eq, Clone, thiserror::Error, miette::Diagnostic)]
+pub struct DummyError;
+
+impl fmt::Display for DummyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Dummy error! Should never be seen!")
+    }
+}
+
+impl CustomError for DummyError {}

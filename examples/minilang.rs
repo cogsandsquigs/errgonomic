@@ -6,7 +6,7 @@ use std::{
 };
 
 use errgonomic::{
-    combinators::{any, between, decimal, is, maybe, whitespace, whitespace_wrapped as ww},
+    combinators::{any, between, decimal, eoi, is, maybe, whitespace, whitespace_wrapped as ww},
     parser::{
         errors::{CustomError, Result},
         input::Input,
@@ -128,7 +128,7 @@ fn value(state: State<&str, ParseError>) -> Result<&str, Expression, ParseError>
 }
 
 fn parser(state: State<&str, ParseError>) -> Result<&str, Expression, ParseError> {
-    value.process(state)
+    ww(value).then(eoi).map(|(x, _)| x).process(state)
 }
 
 pub fn main() {
