@@ -172,6 +172,24 @@ where
             })
         }
     }
+
+    /// Substitutes a parser's error message with a custom error message.
+    ///
+    /// NOTE: Replaces *all* the errors in the current state with the custom error.
+    fn with_err(mut self, err: E) -> impl Parser<I, O, E>
+    where
+        Self: Sized,
+    {
+        move |state: State<I, E>| {
+            self.process(state).map_err(|state| {
+                let input = state.input.fork();
+                state.error(errors::Error::Custom {
+                    err: err.clone(), // TODO: Faster?
+                    at: input,
+                })
+            })
+        }
+    }
 }
 
 impl<I, O, E, P> Parser<I, O, E> for P
