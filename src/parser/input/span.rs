@@ -90,6 +90,28 @@ impl Span {
 
         Span { head, tail }
     }
+
+    /// Subtracts a span from another span. Requires that the spans overlap. Otherwise, will panic.
+    pub fn subtract(&self, other: Span) -> Span {
+        assert!(self.is_overlapping(other), "Spans do not overlap!");
+
+        if self.head >= other.head && self.tail <= other.tail {
+            Span {
+                head: self.head,
+                tail: self.head,
+            }
+        } else if self.head < other.head {
+            Span {
+                head: self.head,
+                tail: self.tail.min(other.head),
+            }
+        } else {
+            Span {
+                head: self.head.max(other.tail),
+                tail: self.tail,
+            }
+        }
+    }
 }
 
 impl From<Range<usize>> for Span {
@@ -349,5 +371,31 @@ mod tests {
         let span1 = Span::new(0, 5);
         let span2 = Span::new(6, 7);
         span1.union(span2);
+    }
+
+    #[test]
+    fn is_correctly_subtracting() {
+        let span1 = Span::new(0, 5);
+        let span2 = Span::new(3, 7);
+        assert_eq!(span1.subtract(span2), Span::new(0, 3));
+        assert_eq!(span2.subtract(span1), Span::new(5, 7));
+
+        let span1 = Span::new(0, 5);
+        let span2 = Span::new(5, 7);
+        assert_eq!(span1.subtract(span2), Span::new(0, 5));
+        assert_eq!(span2.subtract(span1), Span::new(5, 7));
+
+        let span1 = Span::new(0, 5);
+        let span2 = Span::new(0, 5);
+        assert_eq!(span1.subtract(span2), Span::new(0, 0));
+        assert_eq!(span2.subtract(span1), Span::new(0, 0));
+    }
+
+    #[test]
+    #[should_panic]
+    fn is_panicking_on_non_overlapping_subtract() {
+        let span1 = Span::new(0, 5);
+        let span2 = Span::new(6, 7);
+        span1.subtract(span2);
     }
 }

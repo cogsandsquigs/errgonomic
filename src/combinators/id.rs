@@ -14,10 +14,9 @@ use crate::parser::{
 /// assert_eq!(parsed, "test");
 /// assert_eq!(state.as_input().as_inner(), "");
 /// ```
-pub fn id<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result<I, Input<I>, E> {
-    let input = state.input.fork();
-    state.input = state.input.fork().skip(state.input.len());
-    Ok((state, input))
+pub fn id<I: Underlying, E: CustomError>(state: State<I, E>) -> Result<I, Input<I>, E> {
+    let input = state.as_input().fork();
+    Ok((state.with_input(input.skip_all()), input))
 }
 
 #[cfg(test)]
@@ -27,11 +26,10 @@ mod tests {
 
     #[test]
     fn can_parse_id() {
-        let result: (State<&str>, Input<&str>) = id("test".into()).unwrap();
-        assert_eq!(result.1, "test");
-        assert!(!result.0.errors().any_errs());
-        assert_eq!(result.0.errors().num_errors(), 0);
-        assert_eq!(result.0.errors().errors().len(), 0);
-        assert_eq!(result.0.input, "");
+        let (state, parsed): (State<&str>, Input<&str>) = id("test".into()).unwrap();
+        assert_eq!(parsed, "test");
+        assert!(!state.is_err());
+        assert_eq!(state.as_input(), &"");
+        assert_eq!(state.errors().len(), 0);
     }
 }

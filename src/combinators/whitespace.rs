@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::{CustomError, Error, Result},
+    errors::{CustomError, Result},
     input::{Input, Underlying},
     state::State,
     Parser,
@@ -22,29 +22,19 @@ use super::{between, maybe};
 /// assert_eq!(state.as_input().as_inner(), "abc");
 /// ```
 pub fn whitespace<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result<I, Input<I>, E> {
-    let mut len = 1;
-
-    // Make sure that we have at least one digit.
-    if !state.input.fork().take(len).is_whitespace() {
-        let found = state.input.fork().take(len);
-        return Err(state.error(Error::ExpectedWhitespace { found }));
-    }
-
-    loop {
-        len += 1;
-        let num = state.input.fork().take(len);
-
-        if !num.is_whitespace() {
-            len -= 1;
-            break;
-        } else if len >= state.input.fork().len() {
+    let mut len = 0;
+    let original_input = state.as_input().fork();
+    let input = state.as_input_mut();
+    while let Some(c) = input.peek() {
+        if !c.is_ascii_whitespace() {
             break;
         }
+
+        len += 1;
+        input.next();
     }
 
-    let num = state.input.fork().take(len);
-    state.input = state.input.skip(len);
-    Ok((state, num))
+    Ok((state, original_input.take(len)))
 }
 
 /// Parses an input if it is whitespace (of any length), but *not* newlines (or carriage returns).
@@ -64,29 +54,22 @@ pub fn whitespace<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Resu
 pub fn whitespace_not_newline<I: Underlying, E: CustomError>(
     mut state: State<I, E>,
 ) -> Result<I, Input<I>, E> {
-    let mut len = 1;
-
-    // Make sure that we have at least one digit.
-    if !state.input.fork().take(len).is_whitespace_not_newline() {
-        let found = state.input.fork().take(len);
-        return Err(state.error(Error::ExpectedWhitespace { found }));
-    }
-
-    loop {
-        len += 1;
-        let num = state.input.fork().take(len);
-
-        if !num.is_whitespace_not_newline() {
-            len -= 1;
-            break;
-        } else if len >= state.input.fork().len() {
+    let mut len = 0;
+    let original_input = state.as_input().fork();
+    let input = state.as_input_mut();
+    while let Some(c) = input.peek() {
+        if !c.is_ascii_whitespace()
+            || c == b'\n'
+            || (c == b'\r' && input.peek_nth(1) == Some(b'\n'))
+        {
             break;
         }
+
+        len += 1;
+        input.next();
     }
 
-    let num = state.input.fork().take(len);
-    state.input = state.input.skip(len);
-    Ok((state, num))
+    Ok((state, original_input.take(len)))
 }
 
 /// Parses an input if it a newline(s) (or carriage returns), but *not* whitespace.
@@ -104,29 +87,24 @@ pub fn whitespace_not_newline<I: Underlying, E: CustomError>(
 /// assert_eq!(state.as_input().as_inner(), "  \t\nabc");
 /// ```
 pub fn newlines<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result<I, Input<I>, E> {
-    let mut len = 1;
-
-    // Make sure that we have at least one digit.
-    if !state.input.fork().take(len).is_newline() {
-        let found = state.input.fork().take(len);
-        return Err(state.error(Error::ExpectedWhitespace { found }));
-    }
-
-    loop {
-        len += 1;
-        let num = state.input.fork().take(len);
-
-        if !num.is_newline() {
-            len -= 1;
-            break;
-        } else if len >= state.input.fork().len() {
+    let mut len = 0;
+    let original_input = state.as_input().fork();
+    let input = state.as_input_mut();
+    while let Some(c) = input.peek() {
+        println!("input.peek() = {:?}", c as char);
+        println!(
+            "input.peek_nth(1) = {:?}",
+            input.peek_nth(1).unwrap() as char
+        );
+        if !(c == b'\n' || (c == b'\r' && input.peek_nth(1) == Some(b'\n'))) {
             break;
         }
+
+        len += 1;
+        input.next();
     }
 
-    let num = state.input.fork().take(len);
-    state.input = state.input.skip(len);
-    Ok((state, num))
+    Ok((state, original_input.take(len)))
 }
 
 /// Parses an input wrapped in whitespace, on both ends.
@@ -174,20 +152,20 @@ pub fn whitespace_not_newline_wrapped<I: Underlying, E: CustomError, P: Parser<I
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::combinators::is;
+    use crate::{combinators::is, parser::errors::Error};
 
     #[test]
     fn can_parse_whitespace() {
         let (state, parsed): (State<&str>, Input<&str>) =
             whitespace.process("  \t\n".into()).unwrap();
         assert_eq!(parsed, "  \t\n");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
         assert_eq!(state.as_input().as_inner(), "");
 
         let (state, parsed): (State<&str>, Input<&str>) =
             whitespace.process("  \t\nabc".into()).unwrap();
         assert_eq!(parsed, "  \t\n");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
         assert_eq!(state.as_input().as_inner(), "abc");
     }
 
@@ -196,7 +174,7 @@ mod tests {
         let (state, parsed): (State<&str>, Input<&str>) =
             whitespace_not_newline.process("  \t\n".into()).unwrap();
         assert_eq!(parsed, "  \t");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
         assert_eq!(state.as_input().as_inner(), "\n");
     }
 
@@ -205,7 +183,7 @@ mod tests {
         let (state, parsed): (State<&str>, Input<&str>) =
             newlines.process("\n\r\n  \t\n".into()).unwrap();
         assert_eq!(parsed, "\n\r\n");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
         assert_eq!(state.as_input().as_inner(), "  \t\n");
     }
 
@@ -215,16 +193,15 @@ mod tests {
             .process("\n\r\n  \t\nabc\t\n    \r\nasdf".into())
             .unwrap();
         assert_eq!(parsed, "abc");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
         assert_eq!(state.as_input().as_inner(), "asdf");
 
         let (state, parsed): (State<&str>, Input<&str>) =
             whitespace_wrapped(is("abc")).process("abc".into()).unwrap();
         assert_eq!(parsed, "abc");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
         assert_eq!(state.as_input().as_inner(), "");
     }
-
     #[test]
     fn can_parse_whitespace_not_newline_wrapped() {
         let (state, parsed): (State<&str>, Input<&str>) = whitespace_not_newline_wrapped(is("abc"))
@@ -232,7 +209,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(parsed, "abc");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
         assert_eq!(state.as_input().as_inner(), "\n    \r\nasdf");
 
         let (state, parsed): (State<&str>, Input<&str>) = whitespace_not_newline_wrapped(is("abc"))
@@ -240,20 +217,20 @@ mod tests {
             .unwrap();
 
         assert_eq!(parsed, "abc");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
         assert_eq!(state.as_input().as_inner(), "");
 
         let state: State<&str> = whitespace_not_newline_wrapped(is("abc"))
             .process("\n\tabc  ".into())
             .unwrap_err();
 
-        assert!(state.errors().any_errs());
-        assert_eq!(state.errors().num_errors(), 1);
+        assert!(state.is_err());
+        assert_eq!(state.errors().len(), 1);
         assert_eq!(
-            state.errors().errors()[0],
+            state.errors()[0],
             Error::Expected {
                 expected: "abc",
-                found: Input::new_with_span("\n\tabc  ", (0..3).into())
+                found: Input::new_with_span("\n\tabc  ", 0..1)
             }
         )
     }

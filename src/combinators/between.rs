@@ -35,14 +35,13 @@ mod tests {
 
     #[test]
     fn can_parse_between() {
-        let result: (State<&str>, Input<&str>) = between(is("test"), is("123"), is("456"))
+        let (state, parsed): (State<&str>, Input<&str>) = between(is("test"), is("123"), is("456"))
             .process("test123456789".into())
             .unwrap();
 
-        assert_eq!(result.1, "123");
-        assert!(!result.0.errors().any_errs());
-        assert_eq!(result.0.errors().num_errors(), 0);
-        assert_eq!(result.0.errors().errors().len(), 0);
-        assert_eq!(result.0.input, "789");
+        assert_eq!(parsed, "123");
+        assert_eq!(state.as_input(), &"789");
+        assert!(!state.is_err());
+        assert_eq!(state.errors().len(), 0);
     }
 }

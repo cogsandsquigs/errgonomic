@@ -22,31 +22,61 @@ use crate::parser::{
 /// ```
 pub fn is<I: Underlying, E: CustomError>(matches: I) -> impl Parser<I, Input<I>, E> {
     move |mut state: State<I, E>| {
-        if state.input.len() < matches.len() {
-            state.input = state.input.fork().skip(state.input.len());
-            let input = state.input.fork();
-            return Err(state.error(Error::FoundEOI {
-                expected: matches.clone(),
-                eoi_at: input,
-            }));
+        /*
+                if state.as_input().len() < matches.len() {
+                    state.input = state.input.fork().skip(state.input.len());
+                    let input = state.input.fork();
+                    return Err(state.error(Error::FoundEOI {
+                        expected: matches.clone(),
+                        eoi_at: input,
+                    }));
+                }
+        */
+
+        /*
+                let grabbed = state.input.fork().take(matches.len());
+
+                if grabbed == matches {
+                    state.input = state.input.skip(matches.len());
+                    Ok((state, grabbed))
+                } else {
+                    Err(state.error(Error::Expected {
+                        expected: matches.clone(),
+                        found: grabbed,
+                    }))
+                }
+        */
+        let mut matches_input = Input::new(matches.fork());
+        let input = state.as_input_mut();
+        let original_input = input.fork();
+        let mut matched_len = 0;
+
+        while let Some(match_c) = matches_input.next() {
+            if let Some(input_c) = input.peek() {
+                if input_c != match_c {
+                    return Err(state.with_error(Error::Expected {
+                        expected: matches.fork(),
+                        found: original_input.take(matched_len + 1),
+                    }));
+                }
+            } else {
+                return Err(state.with_error(Error::FoundEOI {
+                    expected: matches.fork(),
+                    eoi_at: original_input.skip(matched_len),
+                }));
+            }
+
+            input.next(); // Update the input to the next character
+            matched_len += 1; // ... and increment the matched length
         }
 
-        let grabbed = state.input.fork().take(matches.len());
-
-        if grabbed == matches {
-            state.input = state.input.skip(matches.len());
-            Ok((state, grabbed))
-        } else {
-            Err(state.error(Error::Expected {
-                expected: matches.clone(),
-                found: grabbed,
-            }))
-        }
+        Ok((state, original_input.take(matched_len)))
     }
 }
 
 /// Inverts the result of the parser. That is to say, if the parser is successful, it will return
-/// an error with the output. If the parser is not successful, it will return the state as-is.
+/// an error with the output. If the parser is not successful, it will return the state as-is. If
+/// the parser consumes any input, it will return the state before the input was consumed.
 ///
 /// NOTE: When this returns an error, the state input is not consumed.
 ///
@@ -63,8 +93,8 @@ pub fn not<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
 ) -> impl Parser<I, (), E> {
     move |state: State<I, E>| match p.process(state.fork()) {
         Ok((new_state, _)) => {
-            let found = state.input.fork().subtract(&new_state.input);
-            Err(state.error(Error::NotExpected { found }))
+            let found = state.as_input().fork().subtract(new_state.as_input());
+            Err(state.with_error(Error::NotExpected { found }))
         }
         Err(_) => Ok((state, ())),
     }
@@ -77,44 +107,42 @@ mod tests {
 
     #[test]
     fn can_parse_with_is() {
-        let result: (State<&str>, Input<&str>) = is("test").process("test".into()).unwrap();
-        assert_eq!(result.1, "test");
-        assert!(!result.0.errors().any_errs());
-        assert_eq!(result.0.errors().num_errors(), 0);
-        assert_eq!(result.0.errors().errors().len(), 0);
-        assert_eq!(result.0.input, "");
+        let (state, parsed): (State<&str>, Input<&str>) =
+            is("test").process("test".into()).unwrap();
+        assert_eq!(parsed, "test");
+        assert_eq!(state.as_input(), &"");
+        assert!(!state.is_err());
+        assert_eq!(state.errors().len(), 0);
 
-        let result: (State<&str>, Input<&str>) = is("test").process("test123".into()).unwrap();
-        assert_eq!(result.1, "test");
-        assert!(!result.0.errors().any_errs());
-        assert_eq!(result.0.errors().num_errors(), 0);
-        assert_eq!(result.0.errors().errors().len(), 0);
-        assert_eq!(result.0.input, "123");
+        let (state, parsed): (State<&str>, Input<&str>) =
+            is("test").process("test123".into()).unwrap();
+        assert_eq!(parsed, "test");
+        assert_eq!(state.as_input(), &"123");
+        assert!(!state.is_err());
+        assert_eq!(state.errors().len(), 0);
 
         let result: Input<&str> = is::<_, DummyError>("test").parse("test123").unwrap();
         assert_eq!(result, "test");
 
-        let result: State<&str> = is("test").process("123test".into()).unwrap_err();
-        assert!(result.errors().any_errs());
-        assert_eq!(result.errors().num_errors(), 1);
-        assert_eq!(result.errors().errors().len(), 1);
+        let state: State<&str> = is("test").process("123test".into()).unwrap_err();
+        assert!(state.is_err());
+        assert_eq!(state.errors().len(), 1);
         assert_eq!(
-            result.errors().errors()[0],
-            crate::parser::errors::Error::Expected {
+            state.errors()[0],
+            Error::Expected {
                 expected: "test",
-                found: Input::new_with_span("123test", (0..4).into())
+                found: Input::new_with_span("1", 0..1)
             }
         );
 
         let result: State<&str> = is("test").process("te".into()).unwrap_err();
-        assert!(result.errors().any_errs());
-        assert_eq!(result.errors().num_errors(), 1);
-        assert_eq!(result.errors().errors().len(), 1);
+        assert!(result.is_err());
+        assert_eq!(result.errors().len(), 1);
         assert_eq!(
-            result.errors().errors()[0],
-            crate::parser::errors::Error::FoundEOI {
+            result.errors()[0],
+            Error::FoundEOI {
                 expected: "test",
-                eoi_at: Input::new_with_span("te", (2..2).into())
+                eoi_at: Input::new_with_span("", 0..0)
             }
         );
     }
@@ -122,18 +150,18 @@ mod tests {
     #[test]
     fn can_parse_not() {
         let state: State<&str> = not(is("te")).process("test".into()).unwrap_err();
-        assert_eq!(state.as_input().as_inner(), "test");
-        assert!(state.errors().any_errs());
-        assert_eq!(state.errors().num_errors(), 1);
+        assert_eq!(state.as_input(), &"test");
+        assert!(state.is_err());
+        assert_eq!(state.errors().len(), 1);
         assert_eq!(
-            state.errors().errors(),
-            [Error::NotExpected {
-                found: Input::new_with_span("test", (0..2).into())
-            }]
+            state.errors()[0],
+            Error::NotExpected {
+                found: Input::new_with_span("test", 0..2)
+            }
         );
 
         let (state, _): (State<&str>, _) = not(is("st")).process("test".into()).unwrap();
-        assert_eq!(state.as_input().as_inner(), "test");
-        assert!(!state.errors().any_errs());
+        assert_eq!(state.as_input(), &"test");
+        assert!(!state.is_err());
     }
 }

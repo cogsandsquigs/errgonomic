@@ -1,4 +1,4 @@
-pub trait Underlying: PartialEq + Eq + core::fmt::Debug {
+pub trait Underlying: Clone + PartialEq + Eq + core::fmt::Debug {
     /// Gets the length of the underlying data.
     fn len(&self) -> usize;
 
@@ -13,21 +13,27 @@ pub trait Underlying: PartialEq + Eq + core::fmt::Debug {
     /// Gets a slice of bytes from the start index to the end index, exclusive of the end.
     fn byte_span(&self, start: usize, end: usize) -> Option<&[u8]>;
 
+    /// Gets a slice of itself.
+    fn span(&self, start: usize, end: usize) -> Option<Self>;
+
     /// Transparently clones the underlying source. If it's a reference type, it will simply return
     /// the reference. If it's an owned type, it will clone the owned data.
     fn fork(&self) -> Self;
 }
 
 impl Underlying for &str {
+    #[inline]
     fn len(&self) -> usize {
         (self as &str).len()
     }
 
+    #[inline]
     fn byte_at(&self, n: usize) -> Option<u8> {
         // TODO: Is this fast enough?
         self.as_bytes().get(n).copied()
     }
 
+    #[inline]
     fn byte_span(&self, start: usize, end: usize) -> Option<&[u8]> {
         if start > end || end > self.len() {
             None
@@ -37,20 +43,29 @@ impl Underlying for &str {
         }
     }
 
+    #[inline]
+    fn span(&self, start: usize, end: usize) -> Option<Self> {
+        self.get(start..end)
+    }
+
+    #[inline]
     fn fork(&self) -> Self {
         self
     }
 }
 
 impl Underlying for &[u8] {
+    #[inline]
     fn len(&self) -> usize {
         (self as &[u8]).len()
     }
 
+    #[inline]
     fn byte_at(&self, n: usize) -> Option<u8> {
         self.get(n).copied()
     }
 
+    #[inline]
     fn byte_span(&self, start: usize, end: usize) -> Option<&[u8]> {
         if start > end || end > self.len() {
             None
@@ -59,6 +74,12 @@ impl Underlying for &[u8] {
         }
     }
 
+    #[inline]
+    fn span(&self, start: usize, end: usize) -> Option<Self> {
+        self.get(start..end)
+    }
+
+    #[inline]
     fn fork(&self) -> Self {
         self
     }

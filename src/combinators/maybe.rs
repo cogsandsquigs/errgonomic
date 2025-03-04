@@ -32,12 +32,12 @@ mod tests {
             maybe(is("te")).process("test".into()).unwrap();
         assert_eq!(parsed.unwrap(), "te");
         assert_eq!(state.as_input().as_inner(), "st");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
 
         let (state, parsed): (State<&str>, Option<Input<&str>>) =
             maybe(is("st")).process("test".into()).unwrap();
         assert_eq!(parsed, None);
         assert_eq!(state.as_input().as_inner(), "test");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
     }
 }

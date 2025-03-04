@@ -1,4 +1,5 @@
 use core::fmt;
+use std::ops::Index;
 
 use super::{
     input::{Input, Underlying},
@@ -37,24 +38,31 @@ where
         }
     }
 
-    /// Checks if there are any errors.
-    pub fn any_errs(&self) -> bool {
-        !self.errors.is_empty()
-    }
-
     /// Return the number of errors.
-    pub fn num_errors(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.errors.len()
     }
 
-    /// Returns the errors.
-    pub fn errors(&self) -> &[Error<I, E>] {
-        &self.errors
+    /// Checks if there are any errors.
+    pub fn is_empty(&self) -> bool {
+        self.errors.is_empty()
     }
 
     /// Appends an error to the list of errors.
     pub fn push(&mut self, error: Error<I, E>) {
         self.errors.push(error);
+    }
+}
+
+impl<I, E> Index<usize> for Errors<I, E>
+where
+    I: Underlying,
+    E: CustomError,
+{
+    type Output = Error<I, E>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.errors[index]
     }
 }
 

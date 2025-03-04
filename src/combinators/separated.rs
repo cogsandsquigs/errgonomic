@@ -18,7 +18,8 @@ use crate::parser::{
 /// # use errgonomic::parser::Parser;
 /// # use errgonomic::parser::state::State;
 /// # use errgonomic::parser::input::Input;
-/// let (state, parsed): (State<&str>, Vec<Input<&str>>) = separated(is("hello"), is(","), true).process("hello,hello,hello, world!".into()).unwrap();
+/// let (state, parsed): (State<&str>, Vec<Input<&str>>) =
+///     separated(is("hello"), is(","), true).process("hello,hello,hello, world!".into()).unwrap();
 /// assert_eq!(parsed, vec!["hello", "hello", "hello"]);
 /// assert_eq!(state.as_input().as_inner(), " world!");
 ///```
@@ -74,7 +75,7 @@ mod tests {
                 .unwrap();
         assert_eq!(parsed, vec!["hello", "hello", "hello"]);
         assert_eq!(state.as_input().as_inner(), " world!");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
 
         let (state, parsed): (State<&str>, Vec<Input<&str>>) =
             separated(is("hello"), is(","), true)
@@ -82,7 +83,7 @@ mod tests {
                 .unwrap();
         assert_eq!(parsed, vec!["hello", "hello", "hello"]);
         assert_eq!(state.as_input().as_inner(), " world!");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
 
         let (state, parsed): (State<&str>, Vec<Input<&str>>) =
             separated(is("hello"), is(","), false)
@@ -90,19 +91,19 @@ mod tests {
                 .unwrap();
         assert_eq!(parsed, vec!["hello", "hello", "hello"]);
         assert_eq!(state.as_input().as_inner(), " world!");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
 
         let state: State<&str> = separated(is("hello"), is(","), false)
             .process("hello,hello,hello, world!".into())
             .unwrap_err();
-        assert!(state.errors().any_errs());
-        assert_eq!(state.errors().num_errors(), 1);
-        assert_eq!(state.input, " world!");
+        assert!(state.is_err());
+        assert_eq!(state.errors().len(), 1);
+        assert_eq!(state.as_input(), &" world!");
         assert_eq!(
-            state.errors().errors()[0],
+            state.errors()[0],
             crate::parser::errors::Error::Expected {
                 expected: "hello",
-                found: Input::new_with_span("hello,hello,hello, world!", (18..23).into())
+                found: Input::new_with_span("hello,hello,hello, world!", 18..19)
             }
         );
     }

@@ -6,7 +6,7 @@ pub use underlying::*;
 
 /// The input to the parser. Note that `Input` *never* actually deletes/shrinks the input, it only
 /// just shrinks the *span* that it covers.
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq)]
 pub struct Input<I: Underlying> {
     /// The input to the parser.
     underlying: I,
@@ -34,13 +34,30 @@ impl<I: Underlying> Input<I> {
         }
     }
 
+    /// Gets the underlying input.
+    pub fn as_inner(&self) -> I {
+        self.underlying
+            .span(self.span.head(), self.span.tail())
+            .expect("the span to always cover a (sub)set of the underlying input")
+    }
+
     /// Consumes a single `Item` of the input and returns it.
+    /// TODO: Make input an iterator? But would lead to a lot of things not being accessible, i.e.
+    /// accessing input methods after a `take` would be impossible.
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<u8> {
         let idx = self.span.increment_head(1);
         if idx >= self.span.tail() || idx >= self.underlying.len() {
             return None;
         }
         self.underlying.byte_at(idx)
+    }
+
+    /// Checks if the input is empty.
+    pub fn is_empty(&self) -> bool {
+        self.span.is_empty() // TODO: What if the underlying is a reader and the reader is empty?
+                             // Or what if the reader *isn't* empty but the span is empty, and we
+                             // need to keep increasing the span to keep up with the reader?
     }
 
     /// Peeks at the next byte (the one that would be returned by `next`) of the input without
@@ -69,6 +86,65 @@ impl<I: Underlying> Input<I> {
     /// `Input` from the end of the span to the end of the span.
     pub fn skip(&self, n: usize) -> Input<I> {
         Input::new_with_span(self.underlying.fork(), self.span.skip(n))
+    }
+
+    /// Skips all the way to the end of the input.
+    pub fn skip_all(&self) -> Input<I> {
+        Input::new_with_span(self.underlying.fork(), self.span.skip(self.span.len()))
+    }
+
+    /// Forks the input, creating two separate, independent inputs.
+    pub fn fork(&self) -> Input<I> {
+        Input::new_with_span(self.underlying.fork(), self.span)
+    }
+
+    /// Subtracts the span of `other` from `self` and returns the remaining input.
+    pub fn subtract(&self, other: &Input<I>) -> Input<I> {
+        Input::new_with_span(self.underlying.fork(), self.span.subtract(other.span))
+    }
+
+    /// Joins two inputs together. Requires that the two inputs are contiguous.
+    /// NOTE: Will panic of the spans are not contiguous!
+    pub fn join(&self, other: &Input<I>) -> Input<I> {
+        Input::new_with_span(self.underlying.fork(), self.span.union(other.span))
+    }
+}
+
+impl<I: Underlying> PartialEq for Input<I> {
+    fn eq(&self, other: &Self) -> bool {
+        self.underlying
+            .byte_span(self.span.head(), self.span.tail())
+            == other
+                .underlying
+                .byte_span(other.span.head(), other.span.tail())
+    }
+}
+
+impl<I: Underlying> PartialEq<I> for Input<I> {
+    fn eq(&self, other: &I) -> bool {
+        self.underlying
+            .byte_span(self.span.head(), self.span.tail())
+            == other.byte_span(0, other.len())
+    }
+}
+
+impl<I: Underlying> PartialEq<&I> for Input<I> {
+    fn eq(&self, other: &&I) -> bool {
+        self.underlying
+            .byte_span(self.span.head(), self.span.tail())
+            == other.byte_span(0, other.len())
+    }
+}
+
+impl<I: Underlying> From<I> for Input<I> {
+    fn from(input: I) -> Self {
+        Self::new(input)
+    }
+}
+
+impl<I: Underlying> From<&I> for Input<I> {
+    fn from(input: &I) -> Self {
+        Self::new(input.fork())
     }
 }
 
@@ -249,5 +325,118 @@ mod tests {
         assert_eq!(taken.next(), Some(b'l'));
         assert_eq!(taken.next(), Some(b'l'));
         assert_eq!(taken.next(), None);
+    }
+
+    #[test]
+    fn test_input_eq_input() {
+        // Same content, same spans
+        let input1 = Input::new("hello");
+        let input2 = Input::new("hello");
+        assert_eq!(input1, input2);
+
+        // Same content, different spans
+        let input1 = Input::new_with_span("hello", Span::new(1, 4));
+        let input2 = Input::new_with_span("hello", Span::new(1, 4));
+        assert_eq!(input1, input2);
+
+        // Same content, different spans (should not be equal)
+        let input1 = Input::new_with_span("hello", Span::new(0, 5));
+        let input2 = Input::new_with_span("hello", Span::new(1, 5));
+        assert_ne!(input1, input2);
+
+        // Same spans, different content
+        let input1 = Input::new("hello");
+        let input2 = Input::new("world");
+        assert_ne!(input1, input2);
+
+        // Partially consumed inputs
+        let mut input1 = Input::new("hello");
+        input1.next();
+        let input2 = Input::new_with_span("hello", Span::new(1, 5));
+        assert_eq!(input1, input2);
+
+        // Using different underlying types
+        //let input1 = Input::new("hello");
+        //let input2 = Input::new(b"hello".as_slice());
+        //assert_eq!(input1, input2);
+    }
+
+    #[test]
+    fn test_input_eq_underlying() {
+        // Input equals the same string
+        let input = Input::new("hello");
+        assert_eq!(input, "hello");
+
+        // Input with span equals substring
+        let input = Input::new_with_span("hello", Span::new(1, 4));
+        assert_eq!(input, "ell");
+
+        // Partially consumed input equals substring
+        let mut input = Input::new("hello");
+        input.next();
+        input.next();
+        assert_eq!(input, "llo");
+
+        // Input equals byte slice
+        let input = Input::new(b"hello".as_slice());
+        assert_eq!(input, b"hello".as_slice());
+
+        // Input doesn't equal a different value
+        let input = Input::new("hello");
+        assert_ne!(input, "world");
+    }
+
+    #[test]
+    fn test_input_eq_ref_underlying() {
+        // Input equals reference to underlying
+        let s = "hello";
+        let input = Input::new(s);
+        assert_eq!(input, &s);
+
+        // Input with span equals reference to substring
+        let s = "hello";
+        let input = Input::new_with_span(s, Span::new(1, 4));
+        let substring = "ell";
+        assert_eq!(input, &substring);
+
+        // Input doesn't equal reference to different value
+        let s = "hello";
+        let different = "world";
+        let input = Input::new(s);
+        assert_ne!(input, &different);
+    }
+
+    #[test]
+    fn test_edge_cases() {
+        // Empty inputs
+        let input1 = Input::new("");
+        let input2 = Input::new("");
+        assert_eq!(input1, input2);
+        assert_eq!(input1, "");
+
+        // Empty span
+        let input = Input::new_with_span("hello", Span::new(2, 2));
+        assert_eq!(input, "");
+
+        // Input at end of string
+        let mut input = Input::new("hi");
+        input.next();
+        input.next();
+        assert_eq!(input, "");
+    }
+
+    #[test]
+    fn is_correctly_subtracting() {
+        let input1 = Input::new("hello");
+        let input2 = Input::new("hello");
+        let subtracted = input1.subtract(&input2);
+        assert_eq!(subtracted, "");
+        assert_eq!(subtracted.span.head(), 0);
+        assert_eq!(subtracted.span.tail(), 0);
+
+        let input1 = Input::new("hello, world!");
+        let input2 = Input::new("hello");
+        assert_eq!(input1.subtract(&input2), ", world!");
+        assert_eq!(input2.subtract(&input1), "");
     }
 }

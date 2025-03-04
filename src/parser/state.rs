@@ -1,4 +1,3 @@
-/*
 use super::{
     errors::{CustomError, DummyError, Error, Errors},
     input::{Input, Underlying},
@@ -12,9 +11,7 @@ where
     E: CustomError,
 {
     /// The input we are currently parsing.
-    /// NOTE: Only public to this library, as we don't want the user directly manipulating the
-    /// input.
-    pub(crate) input: Input<I>,
+    input: Input<I>,
 
     /// Any errors that occurred during parsing.
     errors: Errors<I, E>,
@@ -35,13 +32,18 @@ where
         }
     }
 
+    /// Checks if there are any errors.
+    pub fn is_err(&self) -> bool {
+        !self.errors.is_empty()
+    }
+
     /// Get the errors that occurred during parsing.
     pub fn errors(&self) -> &Errors<I, E> {
         &self.errors
     }
 
     /// Append an error to the list of errors.
-    pub fn error(mut self, error: Error<I, E>) -> Self {
+    pub fn with_error(mut self, error: Error<I, E>) -> Self {
         self.errors.push(error);
         self
     }
@@ -57,6 +59,17 @@ where
     /// Gets the input.
     pub fn as_input(&self) -> &Input<I> {
         &self.input
+    }
+
+    /// Gets a mutable reference to the input.
+    pub fn as_input_mut(&mut self) -> &mut Input<I> {
+        &mut self.input
+    }
+
+    /// Sets the input.
+    pub fn with_input(mut self, input: Input<I>) -> Self {
+        self.input = input;
+        self
     }
 }
 
@@ -81,4 +94,3 @@ where
         Self::new(input)
     }
 }
-*/

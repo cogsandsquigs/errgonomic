@@ -1,11 +1,9 @@
 //! The parser types. This dictates how the parser is used and how it should be ran.
-/*
-//pub mod errors;
+pub mod errors;
 pub mod input;
-pub mod span;
 pub mod state;
 
-//use errors::{CustomError, DummyError, Errors, Result};
+use errors::{CustomError, DummyError, Errors, Result};
 use input::Underlying;
 use state::State;
 
@@ -42,10 +40,11 @@ where
     /// let parsed = id::<_, DummyError>.parse("test").unwrap();
     /// assert_eq!(parsed, "test");
     /// ```
+    #[inline]
     fn parse(&mut self, input: I) -> core::result::Result<O, Errors<I, E>> {
         self.process(State::new(input))
             .map(|(state, output)| {
-                assert!(!state.errors().any_errs());
+                assert!(state.errors().is_empty()); // TODO: Process errors in parser
                 output
             })
             .map_err(|state| state.errors().clone())
@@ -60,6 +59,7 @@ where
     /// let parsed = decimal::<_, DummyError>.map(|o: Input<&str>| o.as_inner().parse::<u32>().unwrap()).parse("123").unwrap();
     /// assert_eq!(parsed, 123);
     /// ```
+    #[inline]
     fn map<O2, F: Fn(O) -> O2>(mut self, f: F) -> impl Parser<I, O2, E>
     where
         Self: Sized,
@@ -84,6 +84,7 @@ where
     /// let parsed = decimal::<_, DummyError>.map(|o: Input<&str>| o.as_inner().parse::<u32>().unwrap()).parse("123").unwrap();
     /// assert_eq!(parsed, 123);
     /// ```
+    #[inline]
     fn map_with_state<O2, F: Fn(State<I, E>, O) -> (State<I, E>, O2)>(
         mut self,
         f: F,
@@ -96,6 +97,7 @@ where
 
     /// Like `map`, but processes the output with a function that returns a (std) `Result`. If it's
     /// `Ok`, parsing continues as normal. If it's `Err`, the error is returned.
+    #[inline]
     fn map_res<O2, F: Fn(O) -> core::result::Result<O2, E>>(mut self, f: F) -> impl Parser<I, O2, E>
     where
         Self: Sized,
@@ -104,10 +106,10 @@ where
             self.process(state).and_then(|(state, output)| {
                 f(output)
                     .map_err(|e| {
-                        let input = state.input.fork();
+                        let input = state.as_input().fork();
                         state
                             .fork()
-                            .error(errors::Error::Custom { err: e, at: input })
+                            .with_error(errors::Error::Custom { err: e, at: input })
                     })
                     .map(|output| (state, output))
             })
@@ -123,6 +125,7 @@ where
     /// assert_eq!(first, "123");
     /// assert_eq!(second, "abc123");
     /// ```
+    #[inline]
     fn then<O2, P2: Parser<I, O2, E>>(mut self, mut p2: P2) -> impl Parser<I, (O, O2), E>
     where
         Self: Sized,
@@ -157,6 +160,7 @@ where
     /// assert_eq!(parsed.0, "dec:");
     /// assert_eq!(parsed.1, "123");
     /// ```
+    #[inline]
     fn chain<O2, P2: Parser<I, O2, E>, F: Fn(&O) -> P2>(
         mut self,
         f: F,
@@ -176,14 +180,15 @@ where
     /// Substitutes a parser's error message with a custom error message.
     ///
     /// NOTE: Replaces *all* the errors in the current state with the custom error.
+    #[inline]
     fn with_err(mut self, err: E) -> impl Parser<I, O, E>
     where
         Self: Sized,
     {
         move |state: State<I, E>| {
             self.process(state).map_err(|state| {
-                let input = state.input.fork();
-                state.error(errors::Error::Custom {
+                let input = state.as_input().fork();
+                state.with_error(errors::Error::Custom {
                     err: err.clone(), // TODO: Faster?
                     at: input,
                 })
@@ -198,17 +203,8 @@ where
     P: FnMut(State<I, E>) -> Result<I, O, E>,
     E: CustomError,
 {
+    #[inline]
     fn process(&mut self, state: State<I, E>) -> Result<I, O, E> {
         self(state)
     }
-}
-*/
-
-// mod errors;
-mod input;
-// mod state;
-
-pub trait Parser<I, O> {
-    //fn process(&mut self, state: State<I, >) -> Result<I, O, E>;
-    fn process(&mut self, state: I) -> O;
 }

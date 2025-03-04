@@ -12,11 +12,11 @@ use crate::parser::{
 /// assert_eq!(eoi::<_, DummyError>.parse("").unwrap(), ());
 /// ```
 pub fn eoi<I: Underlying, E: CustomError>(state: State<I, E>) -> Result<I, (), E> {
-    if state.input.is_empty() {
+    if state.as_input().is_empty() {
         Ok((state, ()))
     } else {
-        let input = state.input.fork();
-        Err(state.error(Error::ExpectedEOI { found: input }))
+        let input = state.as_input().fork();
+        Err(state.with_error(Error::ExpectedEOI { found: input }))
     }
 }
 
@@ -28,20 +28,18 @@ mod tests {
 
     #[test]
     fn can_parse_eoi() {
-        let result: (State<&str>, ()) = super::eoi("".into()).unwrap();
-        assert!(!result.0.errors().any_errs());
-        assert_eq!(result.0.errors().num_errors(), 0);
-        assert_eq!(result.0.errors().errors().len(), 0);
-        assert_eq!(result.0.input, "");
+        let (state, _): (State<&str>, ()) = eoi("".into()).unwrap();
+        assert_eq!(state.as_input(), &"");
+        assert!(!state.is_err());
+        assert_eq!(state.errors().len(), 0);
 
-        let result: State<&str> = super::eoi("a".into()).unwrap_err();
-        assert!(result.errors().any_errs());
-        assert_eq!(result.errors().num_errors(), 1);
-        assert_eq!(result.errors().errors().len(), 1);
+        let state: State<&str> = super::eoi("a".into()).unwrap_err();
+        assert!(state.is_err());
+        assert_eq!(state.errors().len(), 1);
         assert_eq!(
-            result.errors().errors()[0],
+            state.errors()[0],
             Error::ExpectedEOI {
-                found: Input::new_with_span("a", (0..1).into())
+                found: Input::new_with_span("a", 0..1)
             }
         );
     }

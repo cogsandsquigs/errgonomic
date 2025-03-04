@@ -11,7 +11,7 @@ pub fn consumed<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
 ) -> impl Parser<I, Input<I>, E> {
     move |state: State<I, E>| {
         let (new_state, _) = p.process(state.fork())?;
-        let found = state.input.subtract(&new_state.input);
+        let found = state.as_input().subtract(new_state.as_input());
 
         Ok((new_state, found))
     }
@@ -29,6 +29,6 @@ mod tests {
             consumed(is("te")).process("test".into()).unwrap();
         assert_eq!(parsed, "te");
         assert_eq!(state.as_input().as_inner(), "st");
-        assert!(!state.errors().any_errs());
+        assert!(!state.is_err());
     }
 }
