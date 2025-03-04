@@ -9,6 +9,10 @@ use super::{between, maybe};
 
 /// Parses an input if it is whitespace (of any length), including newlines (or carriage returns).
 ///
+/// NOTE: When `unicode` feature is enabled, this will parse all unicode characters that have the
+/// property `White_Space`, as defined here: https://www.unicode.org/reports/tr44/ (this excludes
+/// zero-width spaces/joiners)
+///
 /// NOTE: Will error if the input is not whitespace.
 ///
 /// ```
@@ -22,19 +26,38 @@ use super::{between, maybe};
 /// assert_eq!(state.as_input().as_inner(), "abc");
 /// ```
 pub fn whitespace<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result<I, Input<I>, E> {
-    let mut len = 0;
-    let original_input = state.as_input().fork();
-    let input = state.as_input_mut();
-    while let Some(c) = input.peek() {
-        if !c.is_ascii_whitespace() {
-            break;
+    #[cfg(not(feature = "unicode"))]
+    {
+        let mut len = 0;
+        let original_input = state.as_input().fork();
+        let input = state.as_input_mut();
+        while let Some(c) = input.peek() {
+            if !c.is_ascii_whitespace() {
+                break;
+            }
+
+            len += 1;
+            input.next();
         }
 
-        len += 1;
-        input.next();
+        Ok((state, original_input.take(len)))
     }
+    #[cfg(feature = "unicode")]
+    {
+        let mut byte_len = 0;
+        let original_input = state.as_input().fork();
+        let input = state.as_input_mut();
+        while let Some(c) = input.peek_char() {
+            if !c.is_whitespace() {
+                break;
+            }
 
-    Ok((state, original_input.take(len)))
+            byte_len += c.len_utf8();
+            input.next_char();
+        }
+
+        Ok((state, original_input.take(byte_len)))
+    }
 }
 
 /// Parses an input if it is whitespace (of any length), but *not* newlines (or carriage returns).
@@ -60,7 +83,7 @@ pub fn whitespace_not_newline<I: Underlying, E: CustomError>(
     while let Some(c) = input.peek() {
         if !c.is_ascii_whitespace()
             || c == b'\n'
-            || (c == b'\r' && input.peek_nth(1) == Some(b'\n'))
+            || (c == b'\r' && input.peek_nth(2) == Some(b'\n'))
         {
             break;
         }
@@ -91,12 +114,7 @@ pub fn newlines<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result
     let original_input = state.as_input().fork();
     let input = state.as_input_mut();
     while let Some(c) = input.peek() {
-        println!("input.peek() = {:?}", c as char);
-        println!(
-            "input.peek_nth(1) = {:?}",
-            input.peek_nth(1).unwrap() as char
-        );
-        if !(c == b'\n' || (c == b'\r' && input.peek_nth(1) == Some(b'\n'))) {
+        if !(c == b'\n' || (c == b'\r' && input.peek_nth(2) == Some(b'\n'))) {
             break;
         }
 
@@ -233,5 +251,29 @@ mod tests {
                 found: Input::new_with_span("\n\tabc  ", 0..1)
             }
         )
+    }
+
+    #[cfg(feature = "unicode")]
+    #[test]
+    fn can_parse_unicode_whitespace() {
+        let (state, parsed): (State<&str>, Input<&str>) = whitespace
+            .process("  \u{00A0}\u{2000}\u{2001}\u{2028}\u{205F}\u{2004}\t\n".into())
+            .unwrap();
+        assert_eq!(
+            parsed,
+            "  \u{00A0}\u{2000}\u{2001}\u{2028}\u{205F}\u{2004}\t\n"
+        );
+        assert!(!state.is_err());
+        assert_eq!(state.as_input().as_inner(), "");
+
+        let (state, parsed): (State<&str>, Input<&str>) = whitespace
+            .process("  \u{00A0}\u{2000}\u{2001}\u{2028}\u{205F}\u{2004}\t\nabc".into())
+            .unwrap();
+        assert_eq!(
+            parsed,
+            "  \u{00A0}\u{2000}\u{2001}\u{2028}\u{205F}\u{2004}\t\n"
+        );
+        assert!(!state.is_err());
+        assert_eq!(state.as_input().as_inner(), "abc");
     }
 }

@@ -12,3 +12,5 @@
 [features]
     # default = ["fancy"]      # WARN: Only for testing!
     # fancy   = ["dep:miette"]
+    # default = ["unicode"] # WARN: Only for testing!
+    unicode = []

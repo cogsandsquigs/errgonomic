@@ -41,7 +41,14 @@ impl<I: Underlying> Input<I> {
             .expect("the span to always cover a (sub)set of the underlying input")
     }
 
-    /// Consumes a single `Item` of the input and returns it.
+    /// Checks if the input is empty.
+    pub fn is_empty(&self) -> bool {
+        self.span.is_empty() // TODO: What if the underlying is a reader and the reader is empty?
+                             // Or what if the reader *isn't* empty but the span is empty, and we
+                             // need to keep increasing the span to keep up with the reader?
+    }
+
+    /// Consumes a single byte of the input and returns it.
     /// TODO: Make input an iterator? But would lead to a lot of things not being accessible, i.e.
     /// accessing input methods after a `take` would be impossible.
     #[allow(clippy::should_implement_trait)]
@@ -53,11 +60,22 @@ impl<I: Underlying> Input<I> {
         self.underlying.byte_at(idx)
     }
 
-    /// Checks if the input is empty.
-    pub fn is_empty(&self) -> bool {
-        self.span.is_empty() // TODO: What if the underlying is a reader and the reader is empty?
-                             // Or what if the reader *isn't* empty but the span is empty, and we
-                             // need to keep increasing the span to keep up with the reader?
+    /// Consumes a character from the input and returns it.
+    /// NOTE: This may consume more than one byte!
+    /// WARN: Will skip over invalid unicode!
+    /// TODO: Make this faster?
+    #[cfg(feature = "unicode")]
+    pub fn next_char(&mut self) -> Option<char> {
+        let mut unicode_bytes = vec![];
+        loop {
+            let c = self.next()?;
+            unicode_bytes.push(c);
+
+            return match core::str::from_utf8(&unicode_bytes) {
+                Ok(c) => c.chars().next(),
+                Err(_) => continue,
+            };
+        }
     }
 
     /// Peeks at the next byte (the one that would be returned by `next`) of the input without
@@ -66,13 +84,66 @@ impl<I: Underlying> Input<I> {
         self.underlying.byte_at(self.span.head())
     }
 
-    /// Peeks at the `n`th byte of the input from the current head (the index of the byte that
-    /// would be returned at the next `.next` call).
-    /// NOTE: `.peek_nth(0)` is equivalent to `.peek`.
-    pub fn peek_nth(&self, n: usize) -> Option<u8> {
-        self.underlying.byte_at(self.span.head() + n)
+    /// Peeks at the next character (the one that would be returned by `next_char`) of the input
+    /// without consuming it.
+    /// WARN: Will skip over invalid unicode!
+    /// TODO: Make this faster?
+    #[cfg(feature = "unicode")]
+    pub fn peek_char(&self) -> Option<char> {
+        let mut unicode_bytes = vec![];
+        loop {
+            let c = self.peek_nth(unicode_bytes.len() + 1)?;
+            unicode_bytes.push(c);
+
+            return match core::str::from_utf8(&unicode_bytes) {
+                Ok(c) => c.chars().next(),
+                Err(_) => continue,
+            };
+        }
     }
 
+    /// peeks at the `n`th byte of the input from the current.
+    /// NOTE: `peek_nth(0) == peek_nth(1) == peek_char()`
+    pub fn peek_nth(&self, n: usize) -> Option<u8> {
+        if n == 0 {
+            self.peek()
+        } else {
+            self.underlying.byte_at(self.span.head() + n - 1)
+        }
+    }
+
+    /// peeks at the `n`th char of the input from the current
+    /// NOTE: `peek_nth_char(0) == peek_nth_char(1) == peek_char()`
+    /// WARN: Will skip over invalid unicode!
+    /// TODO: Make this faster?
+    #[cfg(feature = "unicode")]
+    pub fn peek_nth_char(&self, n: usize) -> Option<char> {
+        if n == 0 {
+            return self.peek_char();
+        }
+
+        let mut unicode_bytes_all = vec![];
+        let mut total_bytes_taken = 0;
+
+        for i in 0..n {
+            unicode_bytes_all.push(vec![]);
+            loop {
+                let c = self.peek_nth(total_bytes_taken + 1)?;
+                unicode_bytes_all[i].push(c);
+                total_bytes_taken += 1;
+
+                match core::str::from_utf8(&unicode_bytes_all[i]) {
+                    Ok(_) => break,
+                    Err(_) => continue,
+                }
+            }
+        }
+
+        core::str::from_utf8(&unicode_bytes_all[n - 1])
+            .expect("to be valid utf8")
+            .chars()
+            .next()
+    }
     /// Take a string of `n` bytes from the current head (the index of the byte that would be
     /// returned at the next `.next` call) and returns them in the input. If `n` is greater
     /// than the length of the span, it will simply return an `Input` from the current head to
@@ -204,18 +275,21 @@ mod tests {
     fn test_peek_nth() {
         let input = Input::new("hello");
         assert_eq!(input.peek_nth(0), Some(b'h'));
+        assert_eq!(input.peek_nth(1), Some(b'h'));
+        assert_eq!(input.peek_nth(2), Some(b'e'));
+        assert_eq!(input.peek_nth(3), Some(b'l'));
+        assert_eq!(input.peek_nth(4), Some(b'l'));
+        assert_eq!(input.peek_nth(5), Some(b'o'));
+        assert_eq!(input.peek_nth(6), None);
+
+        let mut input = Input::new("hello");
+        input.next(); // consume 'h'
+        assert_eq!(input.peek_nth(0), Some(b'e'));
         assert_eq!(input.peek_nth(1), Some(b'e'));
         assert_eq!(input.peek_nth(2), Some(b'l'));
         assert_eq!(input.peek_nth(3), Some(b'l'));
         assert_eq!(input.peek_nth(4), Some(b'o'));
         assert_eq!(input.peek_nth(5), None);
-
-        let mut input = Input::new("hello");
-        input.next(); // consume 'h'
-        assert_eq!(input.peek_nth(0), Some(b'e'));
-        assert_eq!(input.peek_nth(1), Some(b'l'));
-        assert_eq!(input.peek_nth(3), Some(b'o'));
-        assert_eq!(input.peek_nth(4), None);
     }
 
     #[test]
@@ -438,5 +512,84 @@ mod tests {
         let input2 = Input::new("hello");
         assert_eq!(input1.subtract(&input2), ", world!");
         assert_eq!(input2.subtract(&input1), "");
+    }
+
+    #[cfg(feature = "unicode")]
+    #[test]
+    fn gets_next_char() {
+        let mut input = Input::new("hello");
+        assert_eq!(input.next_char(), Some('h'));
+        assert_eq!(input.next_char(), Some('e'));
+        assert_eq!(input.next_char(), Some('l'));
+        assert_eq!(input.next_char(), Some('l'));
+        assert_eq!(input.next_char(), Some('o'));
+        assert_eq!(input.next_char(), None);
+    }
+
+    #[cfg(feature = "unicode")]
+    #[test]
+    fn gets_next_char_with_unicode() {
+        let mut input = Input::new("héllö😊");
+        assert_eq!(input.next_char(), Some('h'));
+        assert_eq!(input.next_char(), Some('é'));
+        assert_eq!(input.next_char(), Some('l'));
+        assert_eq!(input.next_char(), Some('l'));
+        assert_eq!(input.next_char(), Some('ö'));
+        assert_eq!(input.next_char(), Some('😊'));
+        assert_eq!(input.next_char(), None);
+    }
+
+    #[cfg(feature = "unicode")]
+    #[test]
+    fn peeks_next_char() {
+        let mut input = Input::new("hello");
+        assert_eq!(input.peek_char(), Some('h'));
+        assert_eq!(input.peek_char(), Some('h'));
+        assert_eq!(input.next_char(), Some('h'));
+        assert_eq!(input.peek_char(), Some('e'));
+        assert_eq!(input.next_char(), Some('e'));
+        assert_eq!(input.peek_char(), Some('l'));
+        assert_eq!(input.next_char(), Some('l'));
+        assert_eq!(input.next_char(), Some('l'));
+        assert_eq!(input.next_char(), Some('o'));
+        assert_eq!(input.peek_char(), None);
+        assert_eq!(input.next_char(), None);
+    }
+
+    #[cfg(feature = "unicode")]
+    #[test]
+    fn peeks_next_char_with_unicode() {
+        let mut input = Input::new("héllö😊");
+        assert_eq!(input.peek_char(), Some('h'));
+        assert_eq!(input.peek_char(), Some('h'));
+        assert_eq!(input.next_char(), Some('h'));
+        assert_eq!(input.peek_char(), Some('é'));
+        assert_eq!(input.next_char(), Some('é'));
+        assert_eq!(input.peek_char(), Some('l'));
+        assert_eq!(input.next_char(), Some('l'));
+        assert_eq!(input.next_char(), Some('l'));
+        assert_eq!(input.peek_char(), Some('ö'));
+        assert_eq!(input.next_char(), Some('ö'));
+        assert_eq!(input.peek_char(), Some('😊'));
+        assert_eq!(input.next_char(), Some('😊'));
+        assert_eq!(input.peek_char(), None);
+        assert_eq!(input.next_char(), None);
+    }
+
+    #[cfg(feature = "unicode")]
+    #[test]
+    fn peeks_nth_char() {
+        let mut input = Input::new("hello");
+        assert_eq!(input.peek_nth_char(0), Some('h'));
+        assert_eq!(input.peek_nth_char(1), Some('h'));
+        assert_eq!(input.peek_nth_char(2), Some('e'));
+        assert_eq!(input.peek_nth_char(3), Some('l'));
+        assert_eq!(input.peek_nth_char(4), Some('l'));
+        assert_eq!(input.peek_nth_char(5), Some('o'));
+        assert_eq!(input.peek_nth_char(6), None);
+        assert_eq!(input.next_char(), Some('h'));
+        assert_eq!(input.peek_nth_char(0), Some('e'));
+        assert_eq!(input.peek_nth_char(1), Some('e'));
+        assert_eq!(input.peek_nth_char(2), Some('l'));
     }
 }

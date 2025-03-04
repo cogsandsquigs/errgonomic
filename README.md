@@ -26,21 +26,29 @@ So, I built `errgonomic` with these core tenets in mind:
 
 ### Pitfalls
 
-- **Primarily for strings**: I developed this library primarily to parse strings, and primarily to parse programming
-  languages. Therefore, certain applications are less-supported. ~_Technically_, binary is supported, but it's
-  effectively second-class~ Binary is not supported at all, due to the difficulties in supporting both binary and
-  unicode through a unified interface.
+- **Built over binary**: I developed this library primarily to parse strings, but underneath the hood it is all
+  essentially parsing binary. ~Unicode, at the moment, is effectively second-class. However, there is work underway to
+  make Unicode supported (through a `unicode` feature-flag)~ The `unicode` feature-flag is ready for testing! It should
+  enable unicode processing for all things.
 - **Types are annoying**: Due to the way certain things work, you may have to specify types outright for the parsers
   (especially the custom-error type). This doesn't actually hinder parsing in any way, it just may make your source code
   uglier in certain scenarios. See `errgonomic::combinators` for more information.
 
 ## Feature-flags
 
-<!--
-- `fancy`: Enables support for `miette`, and enables `miette::Diagnostic` for `Error` and `Errors`. NOTE: Requires
+- `unicode`: Enables Unicode support, and processes the bytes essentially as characters. Will decrease performance
+  significantly! At least, as of right now. There is work to be done, possibly using external crates to provide
+  better/faster unicode support.
+
+  > [WARN!]
+  > This is an experimental flag! It may not enable unicode support for _all_ parser combinators yet, that is still in
+  > progress.
+  > TODO: Convert all things that use bytes (e.g. numeric stuff) to unicode (parse chars instead)
+
+  <!-- - `fancy`: Enables support for `miette`, and enables `miette::Diagnostic` for `Error` and `Errors`. NOTE: Requires
   anything implementing `CustomError` to implement `miette::Diagnostic` and `core::error::Error`. This also disables
   support for parsing bytes, i.e. `[u8]`.WARN: This feature is not stable yet!
--->
+  -->
 
 ## Contributing
 
