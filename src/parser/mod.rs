@@ -43,11 +43,14 @@ where
     #[inline]
     fn parse(&mut self, input: I) -> core::result::Result<O, Errors<I, E>> {
         self.process(State::new(input))
-            .map(|(state, output)| {
-                assert!(state.errors().is_empty()); // TODO: Process errors in parser
-                output
-            })
             .map_err(|state| state.errors().clone())
+            .map(|(state, output)| {
+                if state.is_err() {
+                    Err(state.errors().clone())
+                } else {
+                    Ok(output)
+                }
+            })?
     }
 
     /// Processes the output of the parser with a function.
