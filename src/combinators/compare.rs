@@ -22,30 +22,6 @@ use crate::parser::{
 /// ```
 pub fn is<I: Underlying, E: CustomError>(matches: I) -> impl Parser<I, Input<I>, E> {
     move |mut state: State<I, E>| {
-        /*
-                if state.as_input().len() < matches.len() {
-                    state.input = state.input.fork().skip(state.input.len());
-                    let input = state.input.fork();
-                    return Err(state.error(Error::FoundEOI {
-                        expected: matches.clone(),
-                        eoi_at: input,
-                    }));
-                }
-        */
-
-        /*
-                let grabbed = state.input.fork().take(matches.len());
-
-                if grabbed == matches {
-                    state.input = state.input.skip(matches.len());
-                    Ok((state, grabbed))
-                } else {
-                    Err(state.error(Error::Expected {
-                        expected: matches.clone(),
-                        found: grabbed,
-                    }))
-                }
-        */
         let mut matches_input = Input::new(matches.fork());
         let input = state.as_input_mut();
         let original_input = input.fork();

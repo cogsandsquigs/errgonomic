@@ -109,7 +109,11 @@ where
     ExpectedAny { eoi_at: Input<I> },
 
     /// A custom error
-    Custom { err: E, at: Input<I> },
+    Custom {
+        err: E,
+        at: Input<I>,
+        found: Option<Input<I>>,
+    },
 }
 
 pub trait CustomError: fmt::Debug + PartialEq + Eq + Clone {}
