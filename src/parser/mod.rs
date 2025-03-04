@@ -1,11 +1,11 @@
 //! The parser types. This dictates how the parser is used and how it should be ran.
-
-pub mod errors;
+/*
+//pub mod errors;
 pub mod input;
 pub mod span;
 pub mod state;
 
-use errors::{CustomError, DummyError, Errors, Result};
+//use errors::{CustomError, DummyError, Errors, Result};
 use input::Underlying;
 use state::State;
 
@@ -201,4 +201,14 @@ where
     fn process(&mut self, state: State<I, E>) -> Result<I, O, E> {
         self(state)
     }
+}
+*/
+
+// mod errors;
+mod input;
+// mod state;
+
+pub trait Parser<I, O> {
+    //fn process(&mut self, state: State<I, >) -> Result<I, O, E>;
+    fn process(&mut self, state: I) -> O;
 }

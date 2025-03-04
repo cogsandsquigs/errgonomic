@@ -27,8 +27,9 @@ So, I built `errgonomic` with these core tenets in mind:
 ### Pitfalls
 
 - **Primarily for strings**: I developed this library primarily to parse strings, and primarily to parse programming
-  languages. Therefore, certain applications are less-supported. _Technically_, binary is supported, but it's
-  effectively second-class.
+  languages. Therefore, certain applications are less-supported. ~_Technically_, binary is supported, but it's
+  effectively second-class~ Binary is not supported at all, due to the difficulties in supporting both binary and
+  unicode through a unified interface.
 - **Types are annoying**: Due to the way certain things work, you may have to specify types outright for the parsers
   (especially the custom-error type). This doesn't actually hinder parsing in any way, it just may make your source code
   uglier in certain scenarios. See `errgonomic::combinators` for more information.
