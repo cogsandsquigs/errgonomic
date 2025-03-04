@@ -6,11 +6,20 @@
     description = "A simple, powerful, and fun combinator parsing library for Rust."
 
 [dependencies]
+    # Fast unicode parsing
+    # See:
+    #   - https://lemire.me/blog/2020/10/20/ridiculously-fast-unicode-utf-8-validation/
+    #   - https://github.com/simdjson/simdjson/blob/master/doc/basics.md#utf-8-validation-alone
+    #   - https://github.com/simdutf/simdutf
+    #   - https://github.com/rusticstuff/simdutf8
+    simdutf8 = { version = "^0.1.5", optional = true }
+
     # TODO: Use these for nicer errors
     # miette = { version = "^7.5.0", optional = true }
 
 [features]
+    default = ["unicode"]      # WARN: Only for testing!
+    unicode = ["dep:simdutf8"]
+
     # default = ["fancy"]      # WARN: Only for testing!
     # fancy   = ["dep:miette"]
-    # default = ["unicode"] # WARN: Only for testing!
-    unicode = []

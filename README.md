@@ -36,14 +36,15 @@ So, I built `errgonomic` with these core tenets in mind:
 
 ## Feature-flags
 
-- `unicode`: Enables Unicode support, and processes the bytes essentially as characters. Will decrease performance
-  significantly! At least, as of right now. There is work to be done, possibly using external crates to provide
-  better/faster unicode support.
+- `unicode`: Enables Unicode support, and processes the bytes essentially as characters.
 
-  > [WARN!]
-  > This is an experimental flag! It may not enable unicode support for _all_ parser combinators yet, that is still in
-  > progress.
-  > TODO: Convert all things that use bytes (e.g. numeric stuff) to unicode (parse chars instead)
+> [WARN!]
+> Will decrease performance! Using a custom allocator, such as [mimalloc](https://github.com/purpleprotocol/mimalloc_rust) or [jemalloc](https://github.com/tikv/jemallocator) may improve performance.
+
+> [WARN!]
+> This is an experimental flag! It may not enable unicode support for _all_ parser combinators yet, that is still in
+> progress.
+> TODO: Convert all things that use bytes (e.g. numeric stuff) to unicode (parse chars instead)
 
   <!-- - `fancy`: Enables support for `miette`, and enables `miette::Diagnostic` for `Error` and `Errors`. NOTE: Requires
   anything implementing `CustomError` to implement `miette::Diagnostic` and `core::error::Error`. This also disables

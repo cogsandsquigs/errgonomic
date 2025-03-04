@@ -71,7 +71,7 @@ impl<I: Underlying> Input<I> {
             let c = self.next()?;
             unicode_bytes.push(c);
 
-            return match core::str::from_utf8(&unicode_bytes) {
+            return match simdutf8::basic::from_utf8(&unicode_bytes) {
                 Ok(c) => c.chars().next(),
                 Err(_) => continue,
             };
@@ -95,7 +95,7 @@ impl<I: Underlying> Input<I> {
             let c = self.peek_nth(unicode_bytes.len() + 1)?;
             unicode_bytes.push(c);
 
-            return match core::str::from_utf8(&unicode_bytes) {
+            return match simdutf8::basic::from_utf8(&unicode_bytes) {
                 Ok(c) => c.chars().next(),
                 Err(_) => continue,
             };
@@ -132,14 +132,14 @@ impl<I: Underlying> Input<I> {
                 unicode_bytes_all[i].push(c);
                 total_bytes_taken += 1;
 
-                match core::str::from_utf8(&unicode_bytes_all[i]) {
+                match simdutf8::basic::from_utf8(&unicode_bytes_all[i]) {
                     Ok(_) => break,
                     Err(_) => continue,
                 }
             }
         }
 
-        core::str::from_utf8(&unicode_bytes_all[n - 1])
+        simdutf8::basic::from_utf8(&unicode_bytes_all[n - 1])
             .expect("to be valid utf8")
             .chars()
             .next()
