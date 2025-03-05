@@ -59,6 +59,6 @@ me, and thus I may not accept or even respond to your issue.
 
 ## TODO:
 
-- [ ] Add unicode `char` buffer in input for unicode parsing.
+- [x] Add unicode `char` buffer in input for unicode parsing.
 - [ ] Add panic- and statement-mode recoveries.
 - [ ] Add more unicode support to parsers that need it (if it accesses raw binary).

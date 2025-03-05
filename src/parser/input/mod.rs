@@ -1,6 +1,8 @@
 mod span;
 mod underlying;
 
+use std::collections::VecDeque;
+
 pub use span::*;
 pub use underlying::*;
 
@@ -15,6 +17,10 @@ pub struct Input<I: Underlying> {
     /// NOTE: The `head` of the span is the byte that we output at the next `.next` call.
     /// `tail` is exclusive of the end of the span.
     span: Span,
+
+    /// A unicode buffer, so that we don't need to re-parse unicode characters.
+    #[cfg(feature = "unicode")]
+    unicode_buf: VecDeque<char>,
 }
 
 impl<I: Underlying> Input<I> {
@@ -23,6 +29,8 @@ impl<I: Underlying> Input<I> {
         Self {
             span: Span::new(0, input.len()),
             underlying: input,
+            #[cfg(feature = "unicode")]
+            unicode_buf: VecDeque::new(),
         }
     }
 
@@ -31,6 +39,8 @@ impl<I: Underlying> Input<I> {
         Self {
             underlying: input,
             span: span.into(),
+            #[cfg(feature = "unicode")]
+            unicode_buf: VecDeque::new(),
         }
     }
 
@@ -66,6 +76,16 @@ impl<I: Underlying> Input<I> {
     /// TODO: Make this faster?
     #[cfg(feature = "unicode")]
     pub fn next_char(&mut self) -> Option<char> {
+        if !self.unicode_buf.is_empty() {
+            let c = self.unicode_buf.pop_front()?;
+
+            for _ in 0..c.len_utf8() {
+                self.next();
+            }
+
+            return Some(c);
+        }
+
         let mut unicode_bytes = vec![];
         loop {
             let c = self.next()?;
@@ -89,14 +109,22 @@ impl<I: Underlying> Input<I> {
     /// WARN: Will skip over invalid unicode!
     /// TODO: Make this faster?
     #[cfg(feature = "unicode")]
-    pub fn peek_char(&self) -> Option<char> {
+    pub fn peek_char(&mut self) -> Option<char> {
+        if let Some(c) = self.unicode_buf.front() {
+            return Some(*c);
+        }
+
         let mut unicode_bytes = vec![];
         loop {
             let c = self.peek_nth(unicode_bytes.len() + 1)?;
             unicode_bytes.push(c);
 
             return match simdutf8::basic::from_utf8(&unicode_bytes) {
-                Ok(c) => c.chars().next(),
+                Ok(c) => {
+                    let c = c.chars().next()?;
+                    self.unicode_buf.push_back(c);
+                    Some(c)
+                }
                 Err(_) => continue,
             };
         }
@@ -117,32 +145,33 @@ impl<I: Underlying> Input<I> {
     /// WARN: Will skip over invalid unicode!
     /// TODO: Make this faster?
     #[cfg(feature = "unicode")]
-    pub fn peek_nth_char(&self, n: usize) -> Option<char> {
+    pub fn peek_nth_char(&mut self, n: usize) -> Option<char> {
         if n == 0 {
-            return self.peek_char();
+            return self.peek_nth_char(1);
+        } else if self.unicode_buf.len() >= n {
+            return self.unicode_buf.get(n - 1).copied();
         }
 
-        let mut unicode_bytes_all = vec![];
-        let mut total_bytes_taken = 0;
+        // MID: self.unicode_buf.len() <= n AND n >= 1
 
-        for i in 0..n {
-            unicode_bytes_all.push(vec![]);
+        let mut total_bytes_len: usize = self.unicode_buf.iter().map(|c| c.len_utf8()).sum();
+
+        for _ in 0..n - self.unicode_buf.len() {
+            let mut unicode_bytes = vec![];
             loop {
-                let c = self.peek_nth(total_bytes_taken + 1)?;
-                unicode_bytes_all[i].push(c);
-                total_bytes_taken += 1;
+                let c = self.peek_nth(total_bytes_len + 1)?;
+                unicode_bytes.push(c);
+                total_bytes_len += 1;
 
-                match simdutf8::basic::from_utf8(&unicode_bytes_all[i]) {
-                    Ok(_) => break,
-                    Err(_) => continue,
+                if let Ok(c) = simdutf8::basic::from_utf8(&unicode_bytes) {
+                    let c = c.chars().next().expect("valid UTF-8");
+                    self.unicode_buf.push_back(c);
+                    break;
                 }
             }
         }
 
-        simdutf8::basic::from_utf8(&unicode_bytes_all[n - 1])
-            .expect("to be valid utf8")
-            .chars()
-            .next()
+        self.unicode_buf.iter().last().copied()
     }
     /// Take a string of `n` bytes from the current head (the index of the byte that would be
     /// returned at the next `.next` call) and returns them in the input. If `n` is greater
