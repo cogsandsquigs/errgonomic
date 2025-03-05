@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::{CustomError, Error, ErrorKind, ExpectedError},
+    errors::{CustomError, Error, ErrorKind, ExpectedError, Result},
     input::{Input, Underlying},
     state::State,
     Parser,
@@ -68,11 +68,55 @@ pub fn take<I: Underlying, E: CustomError>(n: usize) -> impl Parser<I, Input<I>,
     }
 }
 
+/// Takes elements from the input until a parser `until` matches. The output of `until` will be
+/// included in the output. If we encounter an end-of-input before `until` matches, an error will
+/// be returned.
+///
+/// ```
+/// # use errgonomic::combinators::{take_until, is};
+/// # use errgonomic::parser::Parser;
+/// # use errgonomic::parser::state::State;
+/// # use errgonomic::parser::input::Input;
+/// let (state, (parsed, until)): (State<&str>, (Input<&str>, Input<&str>)) = take_until(is("world")).process("hellohellohelloworld!".into()).unwrap();
+/// assert_eq!(parsed, "hellohellohello");
+/// assert_eq!(until, "world");
+/// assert_eq!(state.as_input().as_inner(), "!");
+/// ```
+pub fn take_until<I: Underlying, O2, E: CustomError, P: Parser<I, O2, E>>(
+    mut until: P,
+) -> impl Parser<I, (Input<I>, O2), E> {
+    move |mut state: State<I, E>| -> Result<I, (Input<I>, O2), E> {
+        let mut taken_len = 0;
+        let original_input = state.as_input().fork();
+
+        loop {
+            if state.as_input().peek().is_none() {
+                return Err(state.with_error(Error::new(
+                    ErrorKind::expected(ExpectedError::Anything),
+                    original_input.skip(taken_len).span(),
+                )));
+            }
+
+            match until.process(state.fork()) {
+                Ok((new_state, o)) => {
+                    return Ok((new_state, (original_input.take(taken_len), o)));
+                }
+                Err(_) => {
+                    taken_len += 1;
+                    state = state.with_input(original_input.skip(taken_len));
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::parser::errors::{ErrorKind, ExpectedError};
-
     use super::*;
+    use crate::{
+        combinators::is,
+        parser::errors::{ErrorKind, ExpectedError},
+    };
 
     #[test]
     fn can_parse_take() {
@@ -96,6 +140,18 @@ mod tests {
             state.errors(),
             &Error::new(ErrorKind::expected(ExpectedError::Anything), (4..4).into())
         );
+    }
+
+    #[test]
+    fn can_take_until() {
+        let (state, (parsed, until)): (State<&str>, (Input<&str>, Input<&str>)) =
+            take_until(is("world"))
+                .process("hellohellohelloworld!".into())
+                .unwrap();
+        assert_eq!(parsed, "hellohellohello");
+        assert_eq!(until, "world");
+        assert_eq!(state.as_input().as_inner(), "!");
+        assert!(!state.is_err());
     }
 
     #[cfg(feature = "unicode")]
