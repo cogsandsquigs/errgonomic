@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::{CustomError, Result},
+    errors::{CustomError, Error, ErrorKind, Result},
     input::Underlying,
     state::State,
     Parser,
@@ -38,9 +38,22 @@ where
 {
     #[inline]
     fn any(&mut self, state: State<I, E>) -> Result<I, O, E> {
+        let mut errs: Vec<Error<I, E>> = vec![];
+
         self.0
             .process(state.fork())
-            .or_else(|_| self.1.process(state))
+            .or_else(|e| {
+                errs.push(e.errors().clone()); // TODO: Clone is bad, but don't know how to fix
+                self.1.process(state.fork())
+            })
+            .map_err(|e| {
+                errs.push(e.errors().clone());
+                let span = errs
+                    .iter()
+                    .map(|e| e.span())
+                    .fold(e.as_input().span(), |acc, x| acc.union_between(x));
+                state.with_error(Error::new(ErrorKind::all(errs), span))
+            })
     }
 }
 
@@ -54,10 +67,26 @@ where
 {
     #[inline]
     fn any(&mut self, state: State<I, E>) -> Result<I, O, E> {
+        let mut errs: Vec<Error<I, E>> = vec![];
+
         self.0
             .process(state.fork())
-            .or_else(|_| self.1.process(state.fork()))
-            .or_else(|_| self.2.process(state))
+            .or_else(|e| {
+                errs.push(e.errors().clone()); // TODO: Clone is bad, but don't know how to fix
+                self.1.process(state.fork())
+            })
+            .or_else(|e| {
+                errs.push(e.errors().clone()); // TODO: Clone is bad, but don't know how to fix
+                self.2.process(state.fork())
+            })
+            .map_err(|e| {
+                errs.push(e.errors().clone());
+                let span = errs
+                    .iter()
+                    .map(|e| e.span())
+                    .fold(e.as_input().span(), |acc, x| acc.union_between(x));
+                state.with_error(Error::new(ErrorKind::all(errs), span))
+            })
     }
 }
 
@@ -72,11 +101,30 @@ where
 {
     #[inline]
     fn any(&mut self, state: State<I, E>) -> Result<I, O, E> {
+        let mut errs: Vec<Error<I, E>> = vec![];
+
         self.0
             .process(state.fork())
-            .or_else(|_| self.1.process(state.fork()))
-            .or_else(|_| self.2.process(state.fork()))
-            .or_else(|_| self.3.process(state))
+            .or_else(|e| {
+                errs.push(e.errors().clone()); // TODO: Clone is bad, but don't know how to fix
+                self.1.process(state.fork())
+            })
+            .or_else(|e| {
+                errs.push(e.errors().clone()); // TODO: Clone is bad, but don't know how to fix
+                self.2.process(state.fork())
+            })
+            .or_else(|e| {
+                errs.push(e.errors().clone()); // TODO: Clone is bad, but don't know how to fix
+                self.3.process(state.fork())
+            })
+            .map_err(|e| {
+                errs.push(e.errors().clone());
+                let span = errs
+                    .iter()
+                    .map(|e| e.span())
+                    .fold(e.as_input().span(), |acc, x| acc.union_between(x));
+                state.with_error(Error::new(ErrorKind::all(errs), span))
+            })
     }
 }
 
@@ -86,7 +134,7 @@ mod tests {
     use crate::{
         combinators::{id, is},
         parser::{
-            errors::{DummyError, Error},
+            errors::{DummyError, Error, ExpectedError},
             input::Input,
         },
     };
@@ -109,13 +157,23 @@ mod tests {
             .process("123test".into())
             .unwrap_err();
         assert!(state.is_err());
-        assert_eq!(state.errors().len(), 1);
+        println!("{:#?}", state.errors());
+        assert_eq!(state.errors().len(), 2);
         assert_eq!(
-            state.errors()[0],
-            Error::Expected {
-                expected: "test",
-                found: Input::new_with_span("123test", 0..1)
-            }
+            state.errors(),
+            &Error::new(
+                ErrorKind::All(vec![
+                    Error::new(
+                        ErrorKind::Expected(ExpectedError::Is("done")),
+                        (0..1).into()
+                    ),
+                    Error::new(
+                        ErrorKind::Expected(ExpectedError::Is("test")),
+                        (0..1).into()
+                    ),
+                ]),
+                (0..7).into()
+            )
         );
     }
 }

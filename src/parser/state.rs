@@ -1,5 +1,5 @@
 use super::{
-    errors::{CustomError, DummyError, Error, Errors},
+    errors::{CustomError, DummyError, Error},
     input::{Input, Underlying},
 };
 
@@ -14,7 +14,7 @@ where
     input: Input<I>,
 
     /// Any errors that occurred during parsing.
-    errors: Errors<I, E>,
+    error: Error<I, E>,
 }
 
 impl<I, E> State<I, E>
@@ -27,31 +27,31 @@ where
         let input = Input::new(input);
 
         Self {
-            errors: Errors::new(input.fork()),
+            error: Error::empty(input.span()),
             input,
         }
     }
 
     /// Checks if there are any errors.
     pub fn is_err(&self) -> bool {
-        !self.errors.is_empty()
+        !self.error.is_empty()
     }
 
     /// Get the errors that occurred during parsing.
-    pub fn errors(&self) -> &Errors<I, E> {
-        &self.errors
+    pub fn errors(&self) -> &Error<I, E> {
+        &self.error
     }
 
     /// Append an error to the list of errors.
     pub fn with_error(mut self, error: Error<I, E>) -> Self {
-        self.errors.push(error);
+        self.error.push(error);
         self
     }
 
     /// Fork the state.
     pub fn fork(&self) -> Self {
         Self {
-            errors: self.errors.clone(),
+            error: self.error.clone(),
             input: self.input.fork(),
         }
     }
@@ -79,7 +79,7 @@ where
 {
     fn from(input: Input<I>) -> Self {
         Self {
-            errors: Errors::new(input.fork()),
+            error: Error::empty(input.span()),
             input,
         }
     }

@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::{CustomError, Error},
+    errors::{CustomError, Error, ErrorKind, ExpectedError},
     input::{Input, Underlying},
     state::State,
     Parser,
@@ -30,16 +30,16 @@ pub fn is<I: Underlying, E: CustomError>(matches: I) -> impl Parser<I, Input<I>,
         while let Some(match_c) = matches_input.next() {
             if let Some(input_c) = input.peek() {
                 if input_c != match_c {
-                    return Err(state.with_error(Error::Expected {
-                        expected: matches.fork(),
-                        found: original_input.take(matched_len + 1),
-                    }));
+                    return Err(state.with_error(Error::new(
+                        ErrorKind::expected(ExpectedError::Is(matches.fork())),
+                        original_input.take(matched_len + 1).span(),
+                    )));
                 }
             } else {
-                return Err(state.with_error(Error::FoundEOI {
-                    expected: matches.fork(),
-                    eoi_at: original_input.skip(matched_len),
-                }));
+                return Err(state.with_error(Error::new(
+                    ErrorKind::expected(ExpectedError::Is(matches.fork())),
+                    original_input.skip(matched_len).span(),
+                )));
             }
 
             input.next(); // Update the input to the next character
@@ -70,7 +70,10 @@ pub fn not<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
     move |state: State<I, E>| match p.process(state.fork()) {
         Ok((new_state, _)) => {
             let found = state.as_input().fork().subtract(new_state.as_input());
-            Err(state.with_error(Error::NotExpected { found }))
+            Err(state.with_error(Error::new(
+                ErrorKind::expected(ExpectedError::Not(found.as_inner())),
+                found.span(),
+            )))
         }
         Err(_) => Ok((state, ())),
     }
@@ -104,22 +107,22 @@ mod tests {
         assert!(state.is_err());
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
-            state.errors()[0],
-            Error::Expected {
-                expected: "test",
-                found: Input::new_with_span("1", 0..1)
-            }
+            state.errors(),
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Is("test")),
+                (0..1).into()
+            )
         );
 
         let result: State<&str> = is("test").process("te".into()).unwrap_err();
         assert!(result.is_err());
         assert_eq!(result.errors().len(), 1);
         assert_eq!(
-            result.errors()[0],
-            Error::FoundEOI {
-                expected: "test",
-                eoi_at: Input::new_with_span("", 0..0)
-            }
+            result.errors(),
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Is("test")),
+                (2..2).into()
+            )
         );
     }
 
@@ -130,10 +133,8 @@ mod tests {
         assert!(state.is_err());
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
-            state.errors()[0],
-            Error::NotExpected {
-                found: Input::new_with_span("test", 0..2)
-            }
+            state.errors(),
+            &Error::new(ErrorKind::expected(ExpectedError::Not("te")), (0..2).into())
         );
 
         let (state, _): (State<&str>, _) = not(is("st")).process("test".into()).unwrap();

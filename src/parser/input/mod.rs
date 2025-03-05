@@ -179,6 +179,11 @@ impl<I: Underlying> Input<I> {
     pub fn join(&self, other: &Input<I>) -> Input<I> {
         Input::new_with_span(self.underlying.fork(), self.span.union(other.span))
     }
+
+    /// Gets the span of the input.
+    pub fn span(&self) -> Span {
+        self.span
+    }
 }
 
 impl<I: Underlying> PartialEq for Input<I> {

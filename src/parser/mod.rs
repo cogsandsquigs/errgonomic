@@ -3,7 +3,7 @@ pub mod errors;
 pub mod input;
 pub mod state;
 
-use errors::{CustomError, DummyError, Errors, Result};
+use errors::{CustomError, DummyError, Error, ErrorKind, Result};
 use input::Underlying;
 use state::State;
 
@@ -41,7 +41,7 @@ where
     /// assert_eq!(parsed, "test");
     /// ```
     #[inline]
-    fn parse(&mut self, input: I) -> core::result::Result<O, Errors<I, E>> {
+    fn parse(&mut self, input: I) -> core::result::Result<O, Error<I, E>> {
         self.process(State::new(input))
             .map_err(|state| state.errors().clone())
             .map(|(state, output)| {
@@ -111,11 +111,10 @@ where
                 f(output)
                     .map_err(|e| {
                         let input = state.as_input().fork();
-                        state.fork().with_error(errors::Error::Custom {
-                            err: e,
-                            found: Some(orig_input.subtract(&input)),
-                            at: input,
-                        })
+                        state.fork().with_error(Error::new(
+                            ErrorKind::custom(e),
+                            orig_input.subtract(&input).span(),
+                        ))
                     })
                     .map(|output| (state, output))
             })
@@ -187,7 +186,7 @@ where
     ///
     /// NOTE: Replaces *all* the errors in the current state with the custom error.
     #[inline]
-    fn with_err(mut self, err: E) -> impl Parser<I, O, E>
+    fn with_err(mut self, e: E) -> impl Parser<I, O, E>
     where
         Self: Sized,
     {
@@ -195,11 +194,10 @@ where
             let orig_input = state.as_input().fork();
             self.process(state).map_err(|state| {
                 let input = state.as_input().fork();
-                state.with_error(errors::Error::Custom {
-                    err: err.clone(), // TODO: Faster?
-                    found: Some(orig_input.subtract(&input)),
-                    at: input,
-                })
+                state.with_error(Error::new(
+                    ErrorKind::custom(e.clone()),
+                    orig_input.subtract(&input).span(),
+                ))
             })
         }
     }

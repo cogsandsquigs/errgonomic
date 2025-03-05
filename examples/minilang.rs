@@ -145,7 +145,7 @@ pub fn main() {
 
         match parser.parse(s.trim()) {
             Ok(x) => println!("{}", x.eval()),
-            Err(err) => eprintln!("Error: {:?}", err),
+            Err(err) => eprintln!("Error:\n{:#?}", err),
         }
 
         // Cleanup the buffer

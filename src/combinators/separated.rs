@@ -63,8 +63,10 @@ pub fn separated<
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use crate::combinators::is;
+    use crate::parser::errors::{Error, ErrorKind, ExpectedError};
     use crate::parser::input::Input;
 
     #[test]
@@ -100,11 +102,11 @@ mod tests {
         assert_eq!(state.errors().len(), 1);
         assert_eq!(state.as_input(), &" world!");
         assert_eq!(
-            state.errors()[0],
-            crate::parser::errors::Error::Expected {
-                expected: "hello",
-                found: Input::new_with_span("hello,hello,hello, world!", 18..19)
-            }
+            state.errors(),
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Is("hello")),
+                (18..19).into()
+            )
         );
     }
 }

@@ -170,7 +170,10 @@ pub fn whitespace_not_newline_wrapped<I: Underlying, E: CustomError, P: Parser<I
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{combinators::is, parser::errors::Error};
+    use crate::{
+        combinators::is,
+        parser::errors::{Error, ErrorKind, ExpectedError},
+    };
 
     #[test]
     fn can_parse_whitespace() {
@@ -245,11 +248,8 @@ mod tests {
         assert!(state.is_err());
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
-            state.errors()[0],
-            Error::Expected {
-                expected: "abc",
-                found: Input::new_with_span("\n\tabc  ", 0..1)
-            }
+            state.errors(),
+            &Error::new(ErrorKind::expected(ExpectedError::Is("abc")), (0..1).into())
         )
     }
 

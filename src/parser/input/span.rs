@@ -91,6 +91,18 @@ impl Span {
         Span { head, tail }
     }
 
+    /// Unions two spans, such that any gaps between the spans are removed.
+    pub fn union_between(&self, other: Span) -> Span {
+        if self.is_overlapping(other) {
+            self.union(other)
+        } else {
+            let head = self.head.min(other.head);
+            let tail = self.tail.max(other.tail);
+
+            Span { head, tail }
+        }
+    }
+
     /// Subtracts a span from another span. Requires that the spans overlap. Otherwise, will panic.
     pub fn subtract(&self, other: Span) -> Span {
         assert!(self.is_overlapping(other), "Spans do not overlap!");
@@ -397,5 +409,56 @@ mod tests {
         let span1 = Span::new(0, 5);
         let span2 = Span::new(6, 7);
         span1.subtract(span2);
+    }
+
+    #[test]
+    fn test_union_between() {
+        // Overlapping spans
+        let span1 = Span::new(0, 5);
+        let span2 = Span::new(3, 8);
+        let union = span1.union_between(span2);
+        assert_eq!(union, Span::new(0, 8));
+
+        // Completely overlapping spans
+        let span1 = Span::new(0, 10);
+        let span2 = Span::new(2, 5);
+        let union = span1.union_between(span2);
+        assert_eq!(union, Span::new(0, 10));
+
+        // Spans with small gap
+        let span1 = Span::new(0, 5);
+        let span2 = Span::new(6, 10);
+        let union = span1.union_between(span2);
+        assert_eq!(union, Span::new(0, 10));
+
+        // Spans with large gap
+        let span1 = Span::new(0, 5);
+        let span2 = Span::new(10, 15);
+        let union = span1.union_between(span2);
+        assert_eq!(union, Span::new(0, 15));
+
+        // One span completely before another
+        let span1 = Span::new(0, 5);
+        let span2 = Span::new(5, 10);
+        let union = span1.union_between(span2);
+        assert_eq!(union, Span::new(0, 10));
+
+        // Spans in reverse order
+        let span1 = Span::new(10, 15);
+        let span2 = Span::new(0, 5);
+        let union = span1.union_between(span2);
+        assert_eq!(union, Span::new(0, 15));
+
+        // Equal spans
+        let span1 = Span::new(5, 10);
+        let span2 = Span::new(5, 10);
+        let union = span1.union_between(span2);
+        assert_eq!(union, Span::new(5, 10));
+
+        // One empty span
+        let span1 = Span::new(0, 5);
+        let span2 = Span::new(5, 5);
+        let union = span1.union_between(span2);
+        assert_eq!(union, Span::new(0, 5));
     }
 }

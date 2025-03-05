@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::{CustomError, Error, Result},
+    errors::{CustomError, Error, ErrorKind, ExpectedError, Result},
     input::{Input, Underlying},
     state::State,
     Parser,
@@ -19,14 +19,15 @@ use super::many_n;
 ///```
 pub fn decimal_digit<I: Underlying, E: CustomError>(state: State<I, E>) -> Result<I, Input<I>, E> {
     let input = state.as_input().fork();
-    match state.as_input().peek() {
+    match input.peek() {
         Some(c) if c.is_ascii_digit() => {
-            let num = input.fork().take(1);
+            let num = input.take(1);
             Ok((state.with_input(input.skip(1)), num))
         }
-        _ => Err(state.with_error(Error::ExpectedDec {
-            found: input.take(1),
-        })),
+        _ => {
+            let x = input.take(1).span();
+            Err(state.with_error(Error::new(ErrorKind::expected(ExpectedError::Digit(10)), x)))
+        }
     }
 }
 
@@ -69,9 +70,10 @@ pub fn hexadecimal_digit<I: Underlying, E: CustomError>(
             let num = input.fork().take(1);
             Ok((state.with_input(input.skip(1)), num))
         }
-        _ => Err(state.with_error(Error::ExpectedDec {
-            found: input.take(1),
-        })),
+        _ => Err(state.with_error(Error::new(
+            ErrorKind::expected(ExpectedError::Digit(16)),
+            input.take(1).span(),
+        ))),
     }
 }
 
@@ -113,10 +115,8 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(result.errors().len(), 1);
         assert_eq!(
-            result.errors()[0],
-            Error::ExpectedDec {
-                found: Input::new_with_span("abc", 0..1)
-            }
+            result.errors(),
+            &Error::new(ErrorKind::expected(ExpectedError::Digit(10)), (0..1).into())
         );
     }
 
@@ -137,10 +137,8 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(result.errors().len(), 1);
         assert_eq!(
-            result.errors()[0],
-            Error::ExpectedDec {
-                found: Input::new_with_span("abc", 0..1)
-            }
+            result.errors(),
+            &Error::new(ErrorKind::expected(ExpectedError::Digit(10)), (0..1).into())
         );
     }
 
@@ -174,10 +172,8 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(result.errors().len(), 1);
         assert_eq!(
-            result.errors()[0],
-            Error::ExpectedDec {
-                found: Input::new_with_span("ghi", 0..1)
-            }
+            result.errors(),
+            &Error::new(ErrorKind::expected(ExpectedError::Digit(16)), (0..1).into())
         );
     }
 
@@ -199,10 +195,8 @@ mod tests {
         assert!(state.is_err());
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
-            state.errors()[0],
-            Error::ExpectedDec {
-                found: Input::new_with_span("ghi", 0..1)
-            }
+            state.errors(),
+            &Error::new(ErrorKind::expected(ExpectedError::Digit(16)), (0..1).into())
         );
     }
 }

@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::{CustomError, Error},
+    errors::{CustomError, Error, ErrorKind, ExpectedError},
     input::{Input, Underlying},
     state::State,
     Parser,
@@ -30,9 +30,10 @@ pub fn take<I: Underlying, E: CustomError>(n: usize) -> impl Parser<I, Input<I>,
 
             for _ in 0..n {
                 if input.peek().is_none() {
-                    return Err(state.with_error(Error::ExpectedAny {
-                        eoi_at: original_input.skip(taken_len),
-                    }));
+                    return Err(state.with_error(Error::new(
+                        ErrorKind::expected(ExpectedError::Anything),
+                        original_input.skip(taken_bytes_len).span(),
+                    )));
                 }
 
                 input.next(); // Update the input to the next character
@@ -50,9 +51,10 @@ pub fn take<I: Underlying, E: CustomError>(n: usize) -> impl Parser<I, Input<I>,
             for _ in 0..n {
                 match input.peek_char() {
                     None => {
-                        return Err(state.with_error(Error::ExpectedAny {
-                            eoi_at: original_input.skip(taken_bytes_len),
-                        }));
+                        return Err(state.with_error(Error::new(
+                            ErrorKind::expected(ExpectedError::Anything),
+                            original_input.skip(taken_bytes_len).span(),
+                        )));
                     }
                     Some(c) => {
                         taken_bytes_len += c.len_utf8(); // ... and increment the matched length
@@ -68,6 +70,8 @@ pub fn take<I: Underlying, E: CustomError>(n: usize) -> impl Parser<I, Input<I>,
 
 #[cfg(test)]
 mod tests {
+    use crate::parser::errors::{ErrorKind, ExpectedError};
+
     use super::*;
 
     #[test]
@@ -89,10 +93,8 @@ mod tests {
         assert!(state.is_err());
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
-            state.errors()[0],
-            Error::ExpectedAny {
-                eoi_at: Input::new_with_span("hell", 4..4)
-            }
+            state.errors(),
+            &Error::new(ErrorKind::expected(ExpectedError::Anything), (4..4).into())
         );
     }
 
@@ -113,10 +115,8 @@ mod tests {
         assert!(state.is_err());
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
-            state.errors()[0],
-            Error::ExpectedAny {
-                eoi_at: Input::new_with_span("héll", 4..4)
-            }
+            state.errors(),
+            &Error::new(ErrorKind::expected(ExpectedError::Anything), (5..5).into())
         );
 
         let (state, parsed): (State<&str>, Input<&str>) =
