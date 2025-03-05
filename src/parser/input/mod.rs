@@ -1,8 +1,6 @@
 mod span;
 mod underlying;
 
-use std::collections::VecDeque;
-
 pub use span::*;
 pub use underlying::*;
 
@@ -20,7 +18,7 @@ pub struct Input<I: Underlying> {
 
     /// A unicode buffer, so that we don't need to re-parse unicode characters.
     #[cfg(feature = "unicode")]
-    unicode_buf: VecDeque<char>,
+    unicode_buf: std::collections::VecDeque<char>,
 }
 
 impl<I: Underlying> Input<I> {
@@ -30,7 +28,7 @@ impl<I: Underlying> Input<I> {
             span: Span::new(0, input.len()),
             underlying: input,
             #[cfg(feature = "unicode")]
-            unicode_buf: VecDeque::new(),
+            unicode_buf: std::collections::VecDeque::new(),
         }
     }
 
@@ -40,7 +38,7 @@ impl<I: Underlying> Input<I> {
             underlying: input,
             span: span.into(),
             #[cfg(feature = "unicode")]
-            unicode_buf: VecDeque::new(),
+            unicode_buf: std::collections::VecDeque::new(),
         }
     }
 
