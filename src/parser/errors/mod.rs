@@ -68,11 +68,11 @@ where
                 *self = error;
             }
             ErrorKind::Sequence(ref mut errors) => {
-                self.from.union(error.from);
+                self.from.union_between(error.from);
                 errors.push(error);
             }
             _ => {
-                self.from.union(error.from);
+                self.from.union_between(error.from);
                 self.kind = ErrorKind::Sequence(vec![self.clone(), error]);
             }
         }
