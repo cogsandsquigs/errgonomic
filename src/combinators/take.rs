@@ -32,7 +32,7 @@ pub fn take<I: Underlying, E: CustomError>(n: usize) -> impl Parser<I, Input<I>,
                 if input.peek().is_none() {
                     return Err(state.with_error(Error::new(
                         ErrorKind::expected(ExpectedError::Anything),
-                        original_input.skip(taken_bytes_len).span(),
+                        original_input.skip(taken_len).span(),
                     )));
                 }
 
