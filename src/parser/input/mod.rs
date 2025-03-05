@@ -626,4 +626,29 @@ mod tests {
         assert_eq!(input.peek_nth_char(1), Some('e'));
         assert_eq!(input.peek_nth_char(2), Some('l'));
     }
+
+    #[cfg(feature = "unicode")]
+    #[test]
+    fn peeks_nth_char_with_unicode() {
+        let mut input = Input::new("héllö😊");
+        assert_eq!(input.peek_nth_char(0), Some('h'));
+        assert_eq!(input.peek_nth_char(1), Some('h'));
+        assert_eq!(input.peek_nth_char(2), Some('é'));
+        assert_eq!(input.peek_nth_char(3), Some('l'));
+        assert_eq!(input.peek_nth_char(4), Some('l'));
+        assert_eq!(input.peek_nth_char(5), Some('ö'));
+        assert_eq!(input.peek_nth_char(6), Some('😊'));
+        assert_eq!(input.peek_nth_char(7), None);
+        assert_eq!(input.next_char(), Some('h'));
+        assert_eq!(input.peek_nth_char(0), Some('é'));
+        assert_eq!(input.peek_nth_char(1), Some('é'));
+        assert_eq!(input.peek_nth_char(2), Some('l'));
+        assert_eq!(input.next_char(), Some('é'));
+        assert_eq!(input.peek_nth_char(0), Some('l'));
+        assert_eq!(input.peek_nth_char(1), Some('l'));
+        assert_eq!(input.peek_nth_char(2), Some('l'));
+        assert_eq!(input.peek_nth_char(3), Some('ö'));
+        assert_eq!(input.peek_nth_char(4), Some('😊'));
+        assert_eq!(input.peek_nth_char(5), None);
+    }
 }
