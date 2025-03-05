@@ -48,7 +48,7 @@ So, I built `errgonomic` with these core tenets in mind:
 
   <!-- - `fancy`: Enables support for `miette`, and enables `miette::Diagnostic` for `Error` and `Errors`. NOTE: Requires
   anything implementing `CustomError` to implement `miette::Diagnostic` and `core::error::Error`. This also disables
-  support for parsing bytes, i.e. `[u8]`.WARN: This feature is not stable yet!
+  support for parsing bytes, i.e. `[u8]`. WARN: This feature is not stable yet!
   -->
 
 ## Contributing
@@ -56,3 +56,9 @@ So, I built `errgonomic` with these core tenets in mind:
 Right now, there really isn't any spots available for contribution. However, you can always write an issue for any
 feature/parser combinator/request you have, and I'll gladly take a look! Just remember that this is a side-project for
 me, and thus I may not accept or even respond to your issue.
+
+## TODO:
+
+- [ ] Add unicode `char` buffer in input for unicode parsing.
+- [ ] Add panic- and statement-mode recoveries.
+- [ ] Add more unicode support to parsers that need it (if it accesses raw binary).
