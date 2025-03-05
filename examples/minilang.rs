@@ -1,4 +1,6 @@
-//! This shows how you can parse a minature language with `errgonomic`.
+//! This shows how you can parse a minature language with `errgonomic`. It also demonstrates
+//! recovery by using the `panic_recover` combinator. That way, we only get one error when there is
+//! a syntax error, instead of many many errors.
 
 use std::{
     fmt,
@@ -6,7 +8,9 @@ use std::{
 };
 
 use errgonomic::{
-    combinators::{any, between, decimal, eoi, is, maybe, whitespace, whitespace_wrapped as ww},
+    combinators::{
+        any, between, decimal, eoi, is, maybe, panic_recover, whitespace, whitespace_wrapped as ww,
+    },
     parser::{
         errors::{CustomError, Result},
         input::Input,
@@ -126,7 +130,7 @@ fn operation(state: State<&str, ParseError>) -> Result<&str, Expression, ParseEr
 }
 
 fn value(state: State<&str, ParseError>) -> Result<&str, Expression, ParseError> {
-    any((number, operation)).process(state)
+    panic_recover(any((number, operation)), eoi).process(state)
 }
 
 fn parser(state: State<&str, ParseError>) -> Result<&str, Expression, ParseError> {

@@ -72,8 +72,10 @@ where
                 errors.push(error);
             }
             _ => {
+                // NOTE: Cloning before err. update so that we can use the original error span in the sequence.
+                let s = self.clone();
                 self.from.union_between(error.from);
-                self.kind = ErrorKind::Sequence(vec![self.clone(), error]);
+                self.kind = ErrorKind::Sequence(vec![s, error]);
             }
         }
     }

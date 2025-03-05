@@ -51,7 +51,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        combinators::is,
+        combinators::{eoi, is},
         parser::errors::{Error, ErrorKind, ExpectedError},
     };
 
@@ -62,6 +62,24 @@ mod tests {
             .unwrap_err();
         assert_eq!(state.as_input().as_inner(), "!");
         assert!(state.is_err());
+        assert_eq!(state.errors().len(), 1);
+        assert_eq!(
+            state.errors(),
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Is("world")),
+                (0..1).into()
+            )
+        )
+    }
+
+    #[test]
+    fn can_panic_recoverto_eoi() {
+        let state: State<&str> = panic_recover(is("world"), eoi)
+            .process("hellohellohelloworld!".into())
+            .unwrap_err();
+        assert_eq!(state.as_input().as_inner(), "");
+        assert!(state.is_err());
+        println!("{:#?}", state.errors());
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
             state.errors(),

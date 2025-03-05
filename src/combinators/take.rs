@@ -90,13 +90,6 @@ pub fn take_until<I: Underlying, O2, E: CustomError, P: Parser<I, O2, E>>(
         let original_input = state.as_input().fork();
 
         loop {
-            if state.as_input().peek().is_none() {
-                return Err(state.with_error(Error::new(
-                    ErrorKind::expected(ExpectedError::Anything),
-                    original_input.skip(taken_len).span(),
-                )));
-            }
-
             match until.process(state.fork()) {
                 Ok((new_state, o)) => {
                     return Ok((new_state, (original_input.take(taken_len), o)));
@@ -105,6 +98,18 @@ pub fn take_until<I: Underlying, O2, E: CustomError, P: Parser<I, O2, E>>(
                     taken_len += 1;
                     state = state.with_input(original_input.skip(taken_len));
                 }
+            }
+
+            // HACK: Gets around the error where if we are `take`-ing until an `eoi` matches, we
+            // will always error before the `eoi` matches as we will check for a `None` first.
+            // TODO: Make this faster?
+            let future = state.fork().with_input(state.as_input().take(1));
+            if state.as_input().peek().is_none() && until.process(future).is_err() {
+                println!("input is none!");
+                return Err(state.with_error(Error::new(
+                    ErrorKind::expected(ExpectedError::Anything),
+                    original_input.skip(taken_len).span(),
+                )));
             }
         }
     }
