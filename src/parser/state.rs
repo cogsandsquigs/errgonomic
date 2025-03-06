@@ -27,7 +27,7 @@ where
         let input = Input::new(input);
 
         Self {
-            error: Error::empty(input.span()),
+            error: Error::empty(input.fork()),
             input,
         }
     }
@@ -79,7 +79,7 @@ where
 {
     fn from(input: Input<I>) -> Self {
         Self {
-            error: Error::empty(input.span()),
+            error: Error::empty(input.fork()),
             input,
         }
     }

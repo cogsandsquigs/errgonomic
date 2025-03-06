@@ -113,7 +113,7 @@ where
                         let input = state.as_input().fork();
                         state.fork().with_error(Error::new(
                             ErrorKind::custom(e),
-                            orig_input.subtract(&input).span(),
+                            orig_input.subtract(&input),
                         ))
                     })
                     .map(|output| (state, output))
@@ -196,7 +196,7 @@ where
                 let input = state.as_input().fork();
                 state.with_error(Error::new(
                     ErrorKind::custom(e.clone()),
-                    orig_input.subtract(&input).span(),
+                    orig_input.subtract(&input),
                 ))
             })
         }

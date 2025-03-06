@@ -24,10 +24,10 @@ pub fn decimal_digit<I: Underlying, E: CustomError>(state: State<I, E>) -> Resul
             let num = input.take(1);
             Ok((state.with_input(input.skip(1)), num))
         }
-        _ => {
-            let x = input.take(1).span();
-            Err(state.with_error(Error::new(ErrorKind::expected(ExpectedError::Digit(10)), x)))
-        }
+        _ => Err(state.with_error(Error::new(
+            ErrorKind::expected(ExpectedError::Digit(10)),
+            input.take(1),
+        ))),
     }
 }
 
@@ -72,7 +72,7 @@ pub fn hexadecimal_digit<I: Underlying, E: CustomError>(
         }
         _ => Err(state.with_error(Error::new(
             ErrorKind::expected(ExpectedError::Digit(16)),
-            input.take(1).span(),
+            input.take(1),
         ))),
     }
 }
@@ -116,7 +116,10 @@ mod tests {
         assert_eq!(result.errors().len(), 1);
         assert_eq!(
             result.errors(),
-            &Error::new(ErrorKind::expected(ExpectedError::Digit(10)), (0..1).into())
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Digit(10)),
+                Input::new_with_span("abc", 0..1)
+            )
         );
     }
 
@@ -138,7 +141,10 @@ mod tests {
         assert_eq!(result.errors().len(), 1);
         assert_eq!(
             result.errors(),
-            &Error::new(ErrorKind::expected(ExpectedError::Digit(10)), (0..1).into())
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Digit(10)),
+                Input::new_with_span("abc", 0..1)
+            )
         );
     }
 
@@ -173,7 +179,10 @@ mod tests {
         assert_eq!(result.errors().len(), 1);
         assert_eq!(
             result.errors(),
-            &Error::new(ErrorKind::expected(ExpectedError::Digit(16)), (0..1).into())
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Digit(16)),
+                Input::new_with_span("ghi", 0..1)
+            )
         );
     }
 
@@ -196,7 +205,10 @@ mod tests {
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
             state.errors(),
-            &Error::new(ErrorKind::expected(ExpectedError::Digit(16)), (0..1).into())
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Digit(16)),
+                Input::new_with_span("ghi", 0..1)
+            )
         );
     }
 }

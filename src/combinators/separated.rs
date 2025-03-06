@@ -105,7 +105,7 @@ mod tests {
             state.errors(),
             &Error::new(
                 ErrorKind::expected(ExpectedError::Is("hello")),
-                (18..19).into()
+                Input::new_with_span("hello,hello,hello, world!", 18..19)
             )
         );
     }

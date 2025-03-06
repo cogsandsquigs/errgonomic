@@ -52,7 +52,10 @@ mod tests {
     use super::*;
     use crate::{
         combinators::{eoi, is},
-        parser::errors::{Error, ErrorKind, ExpectedError},
+        parser::{
+            errors::{Error, ErrorKind, ExpectedError},
+            input::Input,
+        },
     };
 
     #[test]
@@ -67,7 +70,7 @@ mod tests {
             state.errors(),
             &Error::new(
                 ErrorKind::expected(ExpectedError::Is("world")),
-                (0..1).into()
+                Input::new_with_span("hellohellohelloworld!", 0..1)
             )
         )
     }
@@ -85,7 +88,7 @@ mod tests {
             state.errors(),
             &Error::new(
                 ErrorKind::expected(ExpectedError::Is("world")),
-                (0..1).into()
+                Input::new_with_span("hellohellohelloworld!", 0..1)
             )
         )
     }

@@ -73,11 +73,11 @@ eval! {
                         {{or_elses}}
                         .map_err(|e| {
                             errs.push(e.errors().clone());
-                            let span = errs
+                            let input = errs
                                 .iter()
-                                .map(|e| e.span())
-                                .fold(e.as_input().span(), |acc, x| acc.union_between(x));
-                            state.with_error(Error::new(ErrorKind::all(errs), span))
+                                .map(|err| err.from())
+                                .fold(e.as_input().fork(), |acc, x| acc.join_between(&x));
+                            state.with_error(Error::new(ErrorKind::all(errs), input))
                         })
                 }
             }
@@ -122,14 +122,14 @@ mod tests {
                 ErrorKind::All(vec![
                     Error::new(
                         ErrorKind::Expected(ExpectedError::Is("done")),
-                        (0..1).into()
+                        Input::new_with_span("123test", 0..1)
                     ),
                     Error::new(
                         ErrorKind::Expected(ExpectedError::Is("test")),
-                        (0..1).into()
+                        Input::new_with_span("123test", 0..1)
                     ),
                 ]),
-                (0..7).into()
+                "123test"
             )
         );
     }

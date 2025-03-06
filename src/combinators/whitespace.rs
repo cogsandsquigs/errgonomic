@@ -249,7 +249,10 @@ mod tests {
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
             state.errors(),
-            &Error::new(ErrorKind::expected(ExpectedError::Is("abc")), (0..1).into())
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Is("abc")),
+                Input::new_with_span("\n\tabc  ", 0..1)
+            )
         )
     }
 

@@ -32,7 +32,7 @@ pub fn take<I: Underlying, E: CustomError>(n: usize) -> impl Parser<I, Input<I>,
                 if input.peek().is_none() {
                     return Err(state.with_error(Error::new(
                         ErrorKind::expected(ExpectedError::Anything),
-                        original_input.skip(taken_len).span(),
+                        original_input.skip(taken_len),
                     )));
                 }
 
@@ -53,7 +53,7 @@ pub fn take<I: Underlying, E: CustomError>(n: usize) -> impl Parser<I, Input<I>,
                     None => {
                         return Err(state.with_error(Error::new(
                             ErrorKind::expected(ExpectedError::Anything),
-                            original_input.skip(taken_bytes_len).span(),
+                            original_input.skip(taken_bytes_len),
                         )));
                     }
                     Some(c) => {
@@ -108,7 +108,7 @@ pub fn take_until<I: Underlying, O2, E: CustomError, P: Parser<I, O2, E>>(
                 println!("input is none!");
                 return Err(state.with_error(Error::new(
                     ErrorKind::expected(ExpectedError::Anything),
-                    original_input.skip(taken_len).span(),
+                    original_input.skip(taken_len),
                 )));
             }
         }
@@ -143,7 +143,10 @@ mod tests {
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
             state.errors(),
-            &Error::new(ErrorKind::expected(ExpectedError::Anything), (4..4).into())
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Anything),
+                Input::new_with_span("hell", 4..4)
+            )
         );
     }
 
@@ -177,7 +180,10 @@ mod tests {
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
             state.errors(),
-            &Error::new(ErrorKind::expected(ExpectedError::Anything), (5..5).into())
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Anything),
+                Input::new_with_span("héll", 5..5)
+            )
         );
 
         let (state, parsed): (State<&str>, Input<&str>) =

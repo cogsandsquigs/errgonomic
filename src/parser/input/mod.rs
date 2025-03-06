@@ -207,6 +207,11 @@ impl<I: Underlying> Input<I> {
         Input::new_with_span(self.underlying.fork(), self.span.union(other.span))
     }
 
+    /// Joins two inputs together, regardless of whether or not they are contiguous.
+    pub fn join_between(&self, other: &Input<I>) -> Input<I> {
+        Input::new_with_span(self.underlying.fork(), self.span.union_between(other.span))
+    }
+
     /// Gets the span of the input.
     pub fn span(&self) -> Span {
         self.span

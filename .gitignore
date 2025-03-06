@@ -3,3 +3,4 @@
 # Since this is a library
 Cargo.lock
 
+**/.DS_Store

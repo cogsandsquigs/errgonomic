@@ -18,13 +18,15 @@ pub fn eoi<I: Underlying, E: CustomError>(state: State<I, E>) -> Result<I, (), E
         let input = state.as_input().fork();
         Err(state.with_error(Error::new(
             ErrorKind::Expected(ExpectedError::Nothing),
-            input.span(),
+            input,
         )))
     }
 }
 
 #[cfg(test)]
 mod tests {
+
+    use crate::parser::input::Input;
 
     use super::*;
 
@@ -40,7 +42,10 @@ mod tests {
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
             state.errors(),
-            &Error::new(ErrorKind::Expected(ExpectedError::Nothing), (0..1).into(),)
+            &Error::new(
+                ErrorKind::Expected(ExpectedError::Nothing),
+                Input::new_with_span("a", 0..1)
+            )
         );
     }
 }

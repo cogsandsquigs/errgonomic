@@ -64,6 +64,7 @@ me, and thus I may not accept or even respond to your issue.
 - [x] Create macro to generate more tuple implementations to satisfy `any`.
 - [ ] Add panic- and statement-mode recoveries.
 - [ ] Add more unicode support to parsers that need it (if it accesses raw binary).
+- [ ] Customizable error messages
 - [ ] Add support for `miette` errors.
 - [ ] Fix TODOs in code
 - [ ] Fix the hack in `take_until`, make it faster/more efficient.

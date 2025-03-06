@@ -32,13 +32,13 @@ pub fn is<I: Underlying, E: CustomError>(matches: I) -> impl Parser<I, Input<I>,
                 if input_c != match_c {
                     return Err(state.with_error(Error::new(
                         ErrorKind::expected(ExpectedError::Is(matches.fork())),
-                        original_input.take(matched_len + 1).span(),
+                        original_input.take(matched_len + 1),
                     )));
                 }
             } else {
                 return Err(state.with_error(Error::new(
                     ErrorKind::expected(ExpectedError::Is(matches.fork())),
-                    original_input.skip(matched_len).span(),
+                    original_input.skip(matched_len),
                 )));
             }
 
@@ -72,7 +72,7 @@ pub fn not<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
             let found = state.as_input().fork().subtract(new_state.as_input());
             Err(state.with_error(Error::new(
                 ErrorKind::expected(ExpectedError::Not(found.as_inner())),
-                found.span(),
+                found,
             )))
         }
         Err(_) => Ok((state, ())),
@@ -110,7 +110,7 @@ mod tests {
             state.errors(),
             &Error::new(
                 ErrorKind::expected(ExpectedError::Is("test")),
-                (0..1).into()
+                Input::new_with_span("123test", 0..1)
             )
         );
 
@@ -121,7 +121,7 @@ mod tests {
             result.errors(),
             &Error::new(
                 ErrorKind::expected(ExpectedError::Is("test")),
-                (2..2).into()
+                Input::new_with_span("te", 2..2)
             )
         );
     }
@@ -134,7 +134,10 @@ mod tests {
         assert_eq!(state.errors().len(), 1);
         assert_eq!(
             state.errors(),
-            &Error::new(ErrorKind::expected(ExpectedError::Not("te")), (0..2).into())
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Not("te")),
+                Input::new_with_span("test", 0..2)
+            )
         );
 
         let (state, _): (State<&str>, _) = not(is("st")).process("test".into()).unwrap();
