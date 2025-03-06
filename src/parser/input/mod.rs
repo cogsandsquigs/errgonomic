@@ -256,6 +256,52 @@ impl<I: Underlying> From<&I> for Input<I> {
     }
 }
 
+#[cfg(feature = "fancy")]
+impl<I: Underlying> From<Input<I>> for miette::SourceSpan {
+    fn from(val: Input<I>) -> Self {
+        miette::SourceSpan::new(
+            miette::SourceOffset::from_location(
+                simdutf8::basic::from_utf8(
+                    val.underlying
+                        .byte_span(val.span.head(), val.span.tail())
+                        .expect("span to cover input"),
+                )
+                .expect("valid UTF-8"),
+                // Counts number of lines from start
+                // TODO: Faster?
+                val.underlying
+                    .byte_span(0, val.span.head())
+                    .expect("span to cover input")
+                    .iter()
+                    .filter(|c| **c == b'\n')
+                    .count(),
+                // Counts number of columns at curr. line
+                // TODO: Faster?
+                val.underlying
+                    .byte_span(0, val.span.head())
+                    .expect("span to cover input")
+                    .iter()
+                    .rev()
+                    .take_while(|c| **c != b'\n')
+                    .count(),
+            ),
+            val.span.len(),
+        )
+    }
+}
+
+#[cfg(feature = "fancy")]
+impl<I: Underlying + Send + Sync> miette::SourceCode for Input<I> {
+    fn read_span<'a>(
+        &'a self,
+        span: &miette::SourceSpan,
+        context_lines_before: usize,
+        context_lines_after: usize,
+    ) -> Result<Box<dyn miette::SpanContents<'a> + 'a>, miette::MietteError> {
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

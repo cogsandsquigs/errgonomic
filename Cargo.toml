@@ -29,6 +29,6 @@
     miette = { version = "^7.5.0", optional = true }
 
 [features]
-    # default = ["fancy", "unicode"] # WARN: Only for testing!
+    default = ["fancy", "unicode"] # WARN: Only for testing!
     unicode = ["dep:simdutf8"]
     fancy   = ["dep:miette"]
