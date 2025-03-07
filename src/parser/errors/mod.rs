@@ -2,7 +2,7 @@ mod custom;
 mod kinds;
 
 use super::{
-    input::{Input, Span, Underlying},
+    input::{Input, Underlying},
     state::State,
 };
 

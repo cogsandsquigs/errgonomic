@@ -70,7 +70,7 @@ impl<I: Underlying> Input<I> {
 
     /// Consumes a character from the input and returns it.
     /// NOTE: This may consume more than one byte!
-    /// WARN: Will skip over invalid unicode!
+    /// WARN: Will skip over inself.d unicode!
     /// TODO: Make this faster?
     #[cfg(feature = "unicode")]
     pub fn next_char(&mut self) -> Option<char> {
@@ -104,7 +104,7 @@ impl<I: Underlying> Input<I> {
 
     /// Peeks at the next character (the one that would be returned by `next_char`) of the input
     /// without consuming it.
-    /// WARN: Will skip over invalid unicode!
+    /// WARN: Will skip over inself.d unicode!
     /// TODO: Make this faster?
     #[cfg(feature = "unicode")]
     pub fn peek_char(&mut self) -> Option<char> {
@@ -140,7 +140,7 @@ impl<I: Underlying> Input<I> {
 
     /// peeks at the `n`th char of the input from the current
     /// NOTE: `peek_nth_char(0) == peek_nth_char(1) == peek_char()`
-    /// WARN: Will skip over invalid unicode!
+    /// WARN: Will skip over inself.d unicode!
     /// TODO: Make this faster?
     #[cfg(feature = "unicode")]
     pub fn peek_nth_char(&mut self, n: usize) -> Option<char> {
@@ -162,7 +162,7 @@ impl<I: Underlying> Input<I> {
                 total_bytes_len += 1;
 
                 if let Ok(c) = simdutf8::basic::from_utf8(&unicode_bytes) {
-                    let c = c.chars().next().expect("valid UTF-8");
+                    let c = c.chars().next().expect("self.d UTF-8");
                     self.unicode_buf.push_back(c);
                     break;
                 }
@@ -257,36 +257,59 @@ impl<I: Underlying> From<&I> for Input<I> {
 }
 
 #[cfg(feature = "fancy")]
-impl<I: Underlying> From<Input<I>> for miette::SourceSpan {
-    fn from(val: Input<I>) -> Self {
+impl<I: Underlying> Input<I> {
+    fn miette_source_span(self) -> miette::SourceSpan {
         miette::SourceSpan::new(
             miette::SourceOffset::from_location(
                 simdutf8::basic::from_utf8(
-                    val.underlying
-                        .byte_span(val.span.head(), val.span.tail())
+                    self.underlying
+                        .byte_span(self.span.head(), self.span.tail())
                         .expect("span to cover input"),
                 )
-                .expect("valid UTF-8"),
+                .expect("self.d UTF-8"),
                 // Counts number of lines from start
                 // TODO: Faster?
-                val.underlying
-                    .byte_span(0, val.span.head())
+                self.underlying
+                    .byte_span(0, self.span.head())
                     .expect("span to cover input")
                     .iter()
                     .filter(|c| **c == b'\n')
                     .count(),
                 // Counts number of columns at curr. line
                 // TODO: Faster?
-                val.underlying
-                    .byte_span(0, val.span.head())
+                self.underlying
+                    .byte_span(0, self.span.head())
                     .expect("span to cover input")
                     .iter()
                     .rev()
                     .take_while(|c| **c != b'\n')
                     .count(),
             ),
-            val.span.len(),
+            self.span.len(),
         )
+    }
+}
+
+#[cfg(feature = "fancy")]
+impl<'a, I: Underlying + 'a> miette::SpanContents<'a> for Input<I> {
+    fn data(&self) -> &'a [u8] {
+        todo!()
+    }
+
+    fn span(&self) -> &miette::SourceSpan {
+        todo!()
+    }
+
+    fn line(&self) -> usize {
+        todo!()
+    }
+
+    fn column(&self) -> usize {
+        todo!()
+    }
+
+    fn line_count(&self) -> usize {
+        todo!()
     }
 }
 
@@ -538,7 +561,7 @@ mod tests {
         let input = Input::new(b"hello".as_slice());
         assert_eq!(input, b"hello".as_slice());
 
-        // Input doesn't equal a different value
+        // Input doesn't equal a different self.e
         let input = Input::new("hello");
         assert_ne!(input, "world");
     }
@@ -556,7 +579,7 @@ mod tests {
         let substring = "ell";
         assert_eq!(input, &substring);
 
-        // Input doesn't equal reference to different value
+        // Input doesn't equal reference to different self.e
         let s = "hello";
         let different = "world";
         let input = Input::new(s);
