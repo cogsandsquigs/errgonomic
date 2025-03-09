@@ -21,6 +21,7 @@ use super::take_until;
 /// # use errgonomic::combinators::{panic_recover, is};
 /// # use errgonomic::parser::Parser;
 /// # use errgonomic::parser::state::State;
+/// # use errgonomic::parser::input::Input;
 /// let (state, parsed): (State<&str>, Option<Input<&str>>) = panic_recover(is("world"), is("world"))
 ///     .process("hellohellohelloworld!".into())
 ///     .unwrap();
