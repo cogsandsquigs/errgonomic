@@ -60,6 +60,16 @@ enum ParseError {
 
 impl CustomError for ParseError {}
 
+impl core::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        match self {
+            Self::InvalidOperator => write!(f, "Invalid operator"),
+        }
+    }
+}
+
+impl core::error::Error for ParseError {}
+
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -130,7 +140,10 @@ fn operation(state: State<&str, ParseError>) -> Result<&str, Expression, ParseEr
 }
 
 fn value(state: State<&str, ParseError>) -> Result<&str, Expression, ParseError> {
-    panic_recover(any((number, operation)), eoi).process(state)
+    match panic_recover(any((number, operation)), eoi).process(state)? {
+        (state, Some(output)) => Ok((state, output)),
+        (state, None) => Ok((state, Expression::Number(0))), // Default to 0 b/c we propagate err.
+    }
 }
 
 fn parser(state: State<&str, ParseError>) -> Result<&str, Expression, ParseError> {

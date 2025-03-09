@@ -22,6 +22,16 @@ pub enum MyError {
 
 impl CustomError for MyError {}
 
+impl core::fmt::Display for MyError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        match self {
+            Self::ParseIntError(e) => write!(f, "ParseIntError: {}", e),
+        }
+    }
+}
+
+impl core::error::Error for MyError {}
+
 fn hex_color_channel(state: State<&str, MyError>) -> Result<&str, u8, MyError> {
     many_m_n(2, 2, hexadecimal_digit)
         .map_res(|digits| {

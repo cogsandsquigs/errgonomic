@@ -186,19 +186,37 @@ where
     ///
     /// NOTE: Replaces *all* the errors in the current state with the custom error.
     #[inline]
-    fn with_err(mut self, e: E) -> impl Parser<I, O, E>
+    fn with_err(self, e: E) -> impl Parser<I, O, E>
     where
         Self: Sized,
     {
+        self.with_err_and(move |original, after| {
+            let input = after.as_input().fork();
+            after.with_error(Error::new(
+                ErrorKind::custom(e.clone()),
+                original.as_input().subtract(&input),
+            ))
+        })
+    }
+
+    /// Substitutes a parser's error message with a custom error message, depending on the
+    /// state. You get the state as 2 inputs, the original, and the after-the-fact.
+    ///
+    /// NOTE: Replaces *all* the errors in the current state with the custom error.
+    ///
+    /// WARN: This gives you full control over how errors are handled, including where the error is
+    /// "said" to occur (make sure to get that right! See `with_err`'s source) and how state is
+    /// managed (don't mutate state and then pass it, unless you ABSOLUTELY NEED TO).
+    #[inline]
+    fn with_err_and<F>(mut self, mut f: F) -> impl Parser<I, O, E>
+    where
+        Self: Sized,
+        F: FnMut(State<I, E>, State<I, E>) -> State<I, E>,
+    {
         move |state: State<I, E>| {
-            let orig_input = state.as_input().fork();
-            self.process(state).map_err(|state| {
-                let input = state.as_input().fork();
-                state.with_error(Error::new(
-                    ErrorKind::custom(e.clone()),
-                    orig_input.subtract(&input),
-                ))
-            })
+            let original = state.fork();
+            self.process(state)
+                .map_err(|after: State<I, E>| f(original, after))
         }
     }
 }
