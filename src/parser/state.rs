@@ -33,6 +33,10 @@ where
     }
 
     /// Checks if there are any errors.
+    pub fn is_ok(&self) -> bool {
+        self.error.is_empty()
+    }
+    /// Checks if there are any errors.
     pub fn is_err(&self) -> bool {
         !self.error.is_empty()
     }
@@ -40,6 +44,12 @@ where
     /// Get the errors that occurred during parsing.
     pub fn errors(&self) -> &Error<I, E> {
         &self.error
+    }
+
+    /// Replace the error(s) with this one.
+    pub fn replace_error(mut self, error: Error<I, E>) -> Self {
+        self.error.push(error);
+        self
     }
 
     /// Append an error to the list of errors.

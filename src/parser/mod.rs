@@ -192,7 +192,7 @@ where
     {
         self.with_err_and(move |original, after| {
             let input = after.as_input().fork();
-            after.with_error(Error::new(
+            after.replace_error(Error::new(
                 ErrorKind::custom(e.clone()),
                 original.as_input().subtract(&input),
             ))

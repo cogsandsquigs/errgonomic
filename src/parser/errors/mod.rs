@@ -87,17 +87,3 @@ where
         }
     }
 }
-
-#[cfg(feature = "fancy")]
-impl<E: CustomError> core::fmt::Display for Error<&str, E> {
-    // TODO: Better display!
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        write!(f, "Error: {:?}", self.kind)
-    }
-}
-
-#[cfg(feature = "fancy")]
-impl<E: CustomError> core::error::Error for Error<&str, E> {}
-
-#[cfg(feature = "fancy")]
-impl<E: CustomError> miette::Diagnostic for Error<&str, E> {}
