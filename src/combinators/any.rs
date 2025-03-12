@@ -286,6 +286,31 @@ mod tests {
                 Input::new_with_span("xyz123", 0..1)
             )
         );
+
+        // First parser will fail with a non-committed error
+        let committed_parser = is("hello");
+        // Second parser will fail with a committed error
+        let normal_parser = commit(is("world"));
+
+        let error_state: State<&str> = any((committed_parser, normal_parser))
+            .process("xyz123".into())
+            .unwrap_err();
+
+        assert!(error_state.is_err());
+        // Check that the final error is committed
+        assert!(error_state.errors().is_committed());
+
+        // The error should be from the committed parser only (not a collection of all errors)
+        assert_eq!(
+            error_state.errors(),
+            &Error::new(
+                ErrorKind::Committed(Box::new(Error::new(
+                    ErrorKind::Expected(ExpectedError::Is("world")),
+                    Input::new_with_span("xyz123", 0..1)
+                ))),
+                Input::new_with_span("xyz123", 0..1)
+            )
+        );
     }
 
     #[test]
