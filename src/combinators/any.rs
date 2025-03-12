@@ -287,6 +287,8 @@ mod tests {
             )
         );
 
+        // Now, swap parser committing so we can ensure that we commit even when we're not first.
+
         // First parser will fail with a non-committed error
         let committed_parser = is("hello");
         // Second parser will fail with a committed error
