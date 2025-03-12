@@ -53,6 +53,18 @@ where
         }
     }
 
+    /// Commit on this error.
+    pub fn commit(self) -> Self {
+        let new_from = self.from.fork();
+        let new_kind = ErrorKind::Committed(Box::new(self));
+        Error::new(new_kind, new_from)
+    }
+
+    /// Check if it's committed.
+    pub fn is_committed(&self) -> bool {
+        matches!(self.kind, ErrorKind::Committed(_))
+    }
+
     /// Get where the error is from.
     pub fn from(&self) -> Input<I> {
         self.from.fork()

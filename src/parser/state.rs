@@ -32,6 +32,12 @@ where
         }
     }
 
+    /// Commit on the error.
+    pub fn commit(mut self) -> Self {
+        self.error = self.error.commit();
+        self
+    }
+
     /// Checks if there are any errors.
     pub fn is_ok(&self) -> bool {
         self.error.is_empty()

@@ -11,6 +11,9 @@ where
     /// No errors! We are safe!
     None,
 
+    /// Committed error. We went down this path and can't go back.
+    Committed(Box<Error<I, E>>),
+
     /// Expected something
     Expected(ExpectedError<I>),
 
@@ -51,6 +54,7 @@ where
     pub(super) fn len(&self) -> usize {
         match self {
             Self::None => 0,
+            Self::Committed(e) => e.len(),
             Self::Expected(_) => 1,
             Self::All(errors) => errors.iter().map(|e| e.len()).sum(),
             Self::Sequence(errors) => errors.iter().map(|e| e.len()).sum(),
