@@ -6,6 +6,7 @@
 //! a custom error type. If you do, specify it in the `State` and `Return` types, which should then
 //! handle everything (see `examples/hex.rs`).
 
+mod alphabetic;
 mod any;
 mod between;
 mod compare;
@@ -20,6 +21,7 @@ mod separated;
 mod take;
 mod whitespace;
 
+pub use alphabetic::*;
 pub use any::*;
 pub use between::*;
 pub use compare::*;
