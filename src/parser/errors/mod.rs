@@ -56,8 +56,12 @@ where
     /// Commit on this error.
     pub fn commit(self) -> Self {
         let new_from = self.from.fork();
-        let new_kind = ErrorKind::Committed(Box::new(self));
-        Error::new(new_kind, new_from)
+        if matches!(self.kind, ErrorKind::Committed(_)) {
+            self
+        } else {
+            let new_kind = ErrorKind::Committed(Box::new(self));
+            Error::new(new_kind, new_from)
+        }
     }
 
     /// Check if it's committed.
