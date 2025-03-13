@@ -37,7 +37,13 @@ pub fn separated<
 ) -> impl Parser<I, Vec<O1>, E> {
     move |state: State<I, E>| -> Result<I, Vec<O1>, E> {
         let mut results = Vec::new();
-        let (mut state, o) = p.process(state)?;
+
+        let (mut state, o) = match p.process(state.fork()) {
+            Ok((new_state, o)) => (new_state, o),
+            Err(_) => {
+                return Ok((state, results));
+            }
+        };
         results.push(o);
 
         while let Ok((new_state, _)) = sep.process(state.fork()) {
@@ -68,6 +74,17 @@ mod tests {
     use crate::combinators::is;
     use crate::parser::errors::{Error, ErrorKind, ExpectedError};
     use crate::parser::input::Input;
+
+    #[test]
+    fn can_parse_separated_none() {
+        let (state, parsed): (State<&str>, Vec<Input<&str>>) =
+            separated(is("hello"), is(","), true)
+                .process(" world!".into())
+                .unwrap();
+        assert_eq!(parsed, Vec::<Input<&str>>::new());
+        assert_eq!(state.as_input().as_inner(), " world!");
+        assert!(!state.is_err());
+    }
 
     #[test]
     fn can_parse_separated() {
