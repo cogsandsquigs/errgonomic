@@ -1,6 +1,8 @@
 mod custom;
 mod kinds;
 
+use core::fmt;
+
 use super::{
     input::{Input, Underlying},
     state::State,
@@ -101,5 +103,15 @@ where
                 self.kind = ErrorKind::Sequence(vec![s, error]);
             }
         }
+    }
+}
+
+impl<I, E> fmt::Display for Error<I, E>
+where
+    I: Underlying,
+    E: CustomError,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.kind)
     }
 }

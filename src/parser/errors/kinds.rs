@@ -97,3 +97,13 @@ pub enum ExpectedError<I: Underlying> {
     /// Expected something, anything, but found nothing.
     Anything,
 }
+
+impl<I, E> fmt::Display for ErrorKind<I, E>
+where
+    I: Underlying,
+    E: CustomError,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "TODO - Format: {:?}", self) // TODO: FORMAT!
+    }
+}
