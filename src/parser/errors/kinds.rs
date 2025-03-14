@@ -1,3 +1,5 @@
+use core::error;
+
 use super::*;
 use crate::parser::input::Underlying;
 
@@ -106,4 +108,11 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "TODO - Format: {:?}", self) // TODO: FORMAT!
     }
+}
+
+impl<I, E> error::Error for ErrorKind<I, E>
+where
+    I: Underlying,
+    E: CustomError,
+{
 }
