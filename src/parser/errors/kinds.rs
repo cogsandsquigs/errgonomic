@@ -1,5 +1,3 @@
-use core::error;
-
 use super::*;
 use crate::parser::input::Underlying;
 
@@ -110,7 +108,7 @@ where
     }
 }
 
-impl<I, E> error::Error for ErrorKind<I, E>
+impl<I, E> std::error::Error for ErrorKind<I, E>
 where
     I: Underlying,
     E: CustomError,
