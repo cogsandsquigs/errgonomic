@@ -1,7 +1,7 @@
 mod custom;
 mod kinds;
 
-use core::fmt;
+use core::{error, fmt};
 
 use super::{
     input::{Input, Underlying},
@@ -114,4 +114,11 @@ where
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.kind)
     }
+}
+
+impl<I, E> error::Error for Error<I, E>
+where
+    I: Underlying,
+    E: CustomError,
+{
 }

@@ -107,10 +107,3 @@ where
         write!(f, "TODO - Format: {:?}", self) // TODO: FORMAT!
     }
 }
-
-impl<I, E> std::error::Error for ErrorKind<I, E>
-where
-    I: Underlying,
-    E: CustomError,
-{
-}
