@@ -1,5 +1,5 @@
 use crate::parser::{
-    errors::{CustomError, Result},
+    errors::{CustomError, Error, ErrorKind, ExpectedError, Result},
     input::{Input, Underlying},
     state::State,
     Parser,
@@ -40,6 +40,13 @@ pub fn whitespace<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Resu
             input.next();
         }
 
+        if len == 0 {
+            return Err(state.with_error(Error::new(
+                ErrorKind::expected(ExpectedError::Whitespace),
+                original_input.take(1),
+            )));
+        }
+
         Ok((state, original_input.take(len)))
     }
     #[cfg(feature = "unicode")]
@@ -54,6 +61,13 @@ pub fn whitespace<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Resu
 
             byte_len += c.len_utf8();
             input.next_char();
+        }
+
+        if byte_len == 0 {
+            return Err(state.with_error(Error::new(
+                ErrorKind::expected(ExpectedError::Whitespace),
+                original_input.take(1),
+            )));
         }
 
         Ok((state, original_input.take(byte_len)))
@@ -80,6 +94,7 @@ pub fn whitespace_not_newline<I: Underlying, E: CustomError>(
     let mut len = 0;
     let original_input = state.as_input().fork();
     let input = state.as_input_mut();
+
     while let Some(c) = input.peek() {
         if !c.is_ascii_whitespace()
             || c == b'\n'
@@ -90,6 +105,13 @@ pub fn whitespace_not_newline<I: Underlying, E: CustomError>(
 
         len += 1;
         input.next();
+    }
+
+    if len == 0 {
+        return Err(state.with_error(Error::new(
+            ErrorKind::expected(ExpectedError::WhitespaceNoNewlines),
+            original_input.take(1),
+        )));
     }
 
     Ok((state, original_input.take(len)))
@@ -113,6 +135,7 @@ pub fn newlines<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result
     let mut len = 0;
     let original_input = state.as_input().fork();
     let input = state.as_input_mut();
+
     while let Some(c) = input.peek() {
         if !(c == b'\n' || (c == b'\r' && input.peek_nth(2) == Some(b'\n'))) {
             break;
@@ -120,6 +143,13 @@ pub fn newlines<I: Underlying, E: CustomError>(mut state: State<I, E>) -> Result
 
         len += 1;
         input.next();
+    }
+
+    if len == 0 {
+        return Err(state.with_error(Error::new(
+            ErrorKind::expected(ExpectedError::Newlines),
+            original_input.take(1),
+        )));
     }
 
     Ok((state, original_input.take(len)))
@@ -188,6 +218,17 @@ mod tests {
         assert_eq!(parsed, "  \t\n");
         assert!(!state.is_err());
         assert_eq!(state.as_input().as_inner(), "abc");
+
+        let state: State<&str> = whitespace.process("test".into()).unwrap_err();
+        assert!(state.is_err());
+        assert_eq!(state.errors().len(), 1);
+        assert_eq!(
+            state.errors(),
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Whitespace),
+                Input::new_with_span("test", 0..1)
+            )
+        )
     }
 
     #[test]
@@ -197,6 +238,17 @@ mod tests {
         assert_eq!(parsed, "  \t");
         assert!(!state.is_err());
         assert_eq!(state.as_input().as_inner(), "\n");
+
+        let state: State<&str> = whitespace_not_newline.process("test".into()).unwrap_err();
+        assert!(state.is_err());
+        assert_eq!(state.errors().len(), 1);
+        assert_eq!(
+            state.errors(),
+            &Error::new(
+                ErrorKind::expected(ExpectedError::WhitespaceNoNewlines),
+                Input::new_with_span("test", 0..1)
+            )
+        )
     }
 
     #[test]
@@ -206,6 +258,17 @@ mod tests {
         assert_eq!(parsed, "\n\r\n");
         assert!(!state.is_err());
         assert_eq!(state.as_input().as_inner(), "  \t\n");
+
+        let state: State<&str> = newlines.process("test".into()).unwrap_err();
+        assert!(state.is_err());
+        assert_eq!(state.errors().len(), 1);
+        assert_eq!(
+            state.errors(),
+            &Error::new(
+                ErrorKind::expected(ExpectedError::Newlines),
+                Input::new_with_span("test", 0..1)
+            )
+        )
     }
 
     #[test]
