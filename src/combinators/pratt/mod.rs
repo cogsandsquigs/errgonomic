@@ -173,7 +173,7 @@ where
                     };
                     (state, expr)
                 }
-                // Got an infix op, never mind :(
+                // Never mind :(
                 (_, None) => self.pa.process(state)?,
             }
         };
