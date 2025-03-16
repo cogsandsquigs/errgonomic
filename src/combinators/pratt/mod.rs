@@ -116,7 +116,9 @@ where
             Associativity::Right => (2, 1),
         };
 
-        // Update the operators, so that they have the correct precedence
+        // Update the precedences, so that they have the correct precedence.
+        // NOTE: We do this twice so that we don't have any overlapping Associativities.
+        self.increment_precedence();
         self.increment_precedence();
 
         self.infix_ops.push(InfixOperator {
