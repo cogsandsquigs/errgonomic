@@ -6,8 +6,7 @@
 
 mod operators;
 mod tests;
-
-use operators::{InfixOperator, PostfixOperator, PrefixOperator};
+mod utils;
 
 use super::{any, maybe};
 use crate::parser::{
@@ -16,6 +15,8 @@ use crate::parser::{
     state::State,
     Parser,
 };
+use operators::{InfixOperator, PostfixOperator, PrefixOperator};
+use utils::{infix_cons_wrapper, postfix_cons_wrapper, prefix_cons_wrapper};
 
 /// The associativity of an operator. Left-associative operators are parsed from left to right,
 /// i.e. `1 + 2 + 3` is parsed as `(1 + 2) + 3`. Right-associative operators are parsed from right-
@@ -196,16 +197,8 @@ where
             match res {
                 // We got a prefix op, parse it!
                 (state, Some((op, rbp))) => {
-                    let (mut state, rhs) = self.pratt(state, rbp)?;
-                    let expr = match (self.cons_prefix)(op, rhs) {
-                        Err(e) => {
-                            let location = state.as_input().fork();
-                            state = state.with_error(Error::new(ErrorKind::custom(e), location));
-                            return Err(state);
-                        }
-                        Ok(x) => x,
-                    };
-                    (state, expr)
+                    let (state, rhs) = self.pratt(state, rbp)?;
+                    prefix_cons_wrapper(op, rhs, &mut self.cons_prefix, state)?
                 }
                 // Never mind :(
                 (_, None) => self.pa.process(state)?,
@@ -222,17 +215,8 @@ where
                         break;
                     }
 
-                    lhs = match (self.cons_postfix)(lhs, op) {
-                        Err(e) => {
-                            let location = state.as_input().fork();
-                            state =
-                                new_state.with_error(Error::new(ErrorKind::custom(e), location));
-                            return Err(state);
-                        }
-                        Ok(x) => x,
-                    };
-
-                    state = new_state;
+                    (state, lhs) =
+                        postfix_cons_wrapper(lhs, op, &mut self.cons_postfix, new_state)?;
 
                     continue;
                 }
@@ -253,15 +237,7 @@ where
             }
 
             let (new_state, rhs) = self.pratt(new_state, rbp)?;
-            state = new_state; // reassign to `state`, essentially "advances" parser
-            lhs = match (self.cons_infix)(lhs, op, rhs) {
-                Err(e) => {
-                    let location = state.as_input().fork();
-                    state = state.with_error(Error::new(ErrorKind::custom(e), location));
-                    return Err(state);
-                }
-                Ok(x) => x,
-            };
+            (state, lhs) = infix_cons_wrapper(lhs, op, rhs, &mut self.cons_infix, new_state)?;
         }
 
         Ok((state, lhs))
