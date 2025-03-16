@@ -44,6 +44,50 @@ trait List<I: Underlying, O, E: CustomError> {
     fn any(&mut self, state: State<I, E>) -> Result<I, O, E>;
 }
 
+impl<I: Underlying, O, E: CustomError, P: Parser<I, O, E>> List<I, O, E> for &mut [P] {
+    fn any(&mut self, state: State<I, E>) -> Result<I, O, E> {
+        let mut errs = vec![];
+
+        for parser in self.iter_mut() {
+            match parser.process(state.fork()) {
+                Ok(x) => return Ok(x),
+                Err(e) if e.errors().is_committed() => return Err(e),
+                Err(e) => errs.push(e.errors().clone()),
+            }
+        }
+
+        let input = errs
+            .iter()
+            .map(|err| err.from())
+            .reduce(|acc, x| acc.join_between(&x))
+            .expect("There to be at least 1 error");
+
+        Err(state.with_error(Error::new(ErrorKind::all(errs), input)))
+    }
+}
+
+impl<I: Underlying, O, E: CustomError, P: Parser<I, O, E>> List<I, O, E> for &mut Vec<P> {
+    fn any(&mut self, state: State<I, E>) -> Result<I, O, E> {
+        let mut errs = vec![];
+
+        for parser in self.iter_mut() {
+            match parser.process(state.fork()) {
+                Ok(x) => return Ok(x),
+                Err(e) if e.errors().is_committed() => return Err(e),
+                Err(e) => errs.push(e.errors().clone()),
+            }
+        }
+
+        let input = errs
+            .iter()
+            .map(|err| err.from())
+            .reduce(|acc, x| acc.join_between(&x))
+            .expect("There to be at least 1 error");
+
+        Err(state.with_error(Error::new(ErrorKind::all(errs), input)))
+    }
+}
+
 // Magic macro magic that makes the impl. of `List` for (nearly!) all tuples of parsers.
 // See: https://crates.io/crates/eval-macro
 eval! {
