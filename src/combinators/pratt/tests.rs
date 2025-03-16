@@ -12,6 +12,7 @@ enum Expr {
     Ident(String),
     Prefix(Op, Box<Expr>),
     Infix(Box<Expr>, Op, Box<Expr>),
+    Postfix(Box<Expr>, Op),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,6 +22,7 @@ enum Op {
     Mul,
     Div,
     Compose,
+    Factorial,
 }
 
 fn atom(state: State<&str, DummyError>) -> Result<&str, Expr, DummyError> {
@@ -36,8 +38,10 @@ fn pratt_parser(state: State<&str>) -> Result<&str, Expr, DummyError> {
         atom,
         |op, rhs| Ok(Expr::Prefix(op, Box::new(rhs))),
         |lhs, op, rhs| Ok(Expr::Infix(Box::new(lhs), op, Box::new(rhs))),
+        |lhs, op| Ok(Expr::Postfix(Box::new(lhs), op)),
     )
     .with_infix_op(ww(is(".")).map(|_| Op::Compose), Associativity::Right)
+    .with_postfix_op(ww(is("!")).map(|_| Op::Factorial))
     .with_prefix_op(ww(is("-")).map(|_| Op::Sub))
     .with_infix_op(ww(is("*")).map(|_| Op::Mul), Associativity::Left)
     .with_infix_op(ww(is("/")).map(|_| Op::Div), Associativity::Left)
@@ -173,6 +177,59 @@ fn can_parse_complex_prefix() {
                 Op::Mul,
                 Box::new(Expr::Int(5))
             )),
+        )
+    );
+    assert_eq!(state.as_input(), &"");
+    assert!(state.is_ok());
+}
+
+#[test]
+fn can_parse_postfix() {
+    let (state, parsed): (State<&str>, Expr) = pratt_parser.process("123!".into()).unwrap();
+    assert_eq!(
+        parsed,
+        Expr::Postfix(Box::new(Expr::Int(123)), Op::Factorial)
+    );
+    assert_eq!(state.as_input(), &"");
+    assert!(state.is_ok());
+}
+
+#[test]
+fn can_parse_complex_postfix() {
+    let (state, parsed): (State<&str>, Expr) = pratt_parser.process("123! + 456".into()).unwrap();
+    assert_eq!(
+        parsed,
+        Expr::Infix(
+            Box::new(Expr::Postfix(Box::new(Expr::Int(123)), Op::Factorial)),
+            Op::Add,
+            Box::new(Expr::Int(456))
+        )
+    );
+    assert_eq!(state.as_input(), &"");
+    assert!(state.is_ok());
+}
+
+#[test]
+fn can_parse_prefix_and_postfix() {
+    let (state, parsed): (State<&str>, Expr) =
+        pratt_parser.process("3 * -123! + 456".into()).unwrap();
+
+    // NOTE: Since `!` was declared first, we expect it to bind more tightly than `-`. Thus, we
+    // should expect `-123!` to become `-(123!)`.
+
+    assert_eq!(
+        parsed,
+        Expr::Infix(
+            Box::new(Expr::Infix(
+                Box::new(Expr::Int(3)),
+                Op::Mul,
+                Box::new(Expr::Prefix(
+                    Op::Sub,
+                    Box::new(Expr::Postfix(Box::new(Expr::Int(123)), Op::Factorial,)),
+                ))
+            )),
+            Op::Add,
+            Box::new(Expr::Int(456))
         )
     );
     assert_eq!(state.as_input(), &"");
