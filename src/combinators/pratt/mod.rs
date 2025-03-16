@@ -10,7 +10,7 @@ mod utils;
 
 use super::{any, maybe};
 use crate::parser::{
-    errors::{CustomError, Error, ErrorKind, Result},
+    errors::{CustomError, Result},
     input::Underlying,
     state::State,
     Parser,
