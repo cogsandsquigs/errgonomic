@@ -2,3 +2,4 @@
 
 pub mod combinators;
 pub mod parser;
+pub mod prelude;

@@ -1,0 +1,231 @@
+//! A Pratt parser, for all your Pratt-parsing needs.
+//!
+//! NOTE: This was mostly adapted from this excellent blog post by Matklad (creater of
+//! rust-analyzer):
+//! https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
+
+mod operators;
+mod tests;
+
+use operators::{InfixOperator, PrefixOperator};
+
+use super::{any, maybe};
+use crate::parser::{
+    errors::{CustomError, Error, ErrorKind, Result},
+    input::Underlying,
+    state::State,
+    Parser,
+};
+
+/// The associativity of an operator. Left-associative operators are parsed from left to right,
+/// i.e. `1 + 2 + 3` is parsed as `(1 + 2) + 3`. Right-associative operators are parsed from right-
+/// to-left, i.e. `1 ^ 2 ^ 3` is parsed as `1 ^ (2 ^ 3)`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Associativity {
+    Left,
+    Right,
+}
+
+/// A pratt parser, which can handle parsing "operations" in expressions, like addition and
+/// multiplication, or really anything you can think up that is "expression-like".
+pub struct Pratt<'a, I, OExpr, OOp, E, PAtom, CPrefix, CInfix>
+where
+    I: Underlying,
+    E: CustomError,
+    PAtom: Parser<I, OExpr, E>,
+    CPrefix: Fn(OOp, OExpr) -> std::result::Result<OExpr, E>,
+    CInfix: Fn(OExpr, OOp, OExpr) -> std::result::Result<OExpr, E>,
+{
+    /// The atomic parser.
+    pa: PAtom,
+
+    /// The prefix combinator
+    cons_prefix: CPrefix,
+
+    /// The infix combinator
+    cons_infix: CInfix,
+
+    /// The prefix operators
+    prefix_ops: Vec<PrefixOperator<'a, I, OOp, E>>,
+
+    /// The infix operators
+    infix_ops: Vec<InfixOperator<'a, I, OOp, E>>,
+
+    _marker: std::marker::PhantomData<(I, OExpr, OOp, E)>,
+}
+
+impl<'a, I, OExpr, OOp, E, PA, CPrefix, CInfix> Pratt<'a, I, OExpr, OOp, E, PA, CPrefix, CInfix>
+where
+    I: Underlying,
+    E: CustomError,
+    PA: Parser<I, OExpr, E>,
+    CPrefix: Fn(OOp, OExpr) -> std::result::Result<OExpr, E>,
+    CInfix: Fn(OExpr, OOp, OExpr) -> std::result::Result<OExpr, E>,
+{
+    /// Creates a new Pratt parser, with no operators and no parsers. The `cons_prefix` and
+    /// `cons_infix` parsers *combine* an operator (prefix or infix, respectively) with expressions
+    /// to produce a new expression.
+    ///
+    /// NOTE: The operators you get for the infix and prefix operators are *guaranteed* to be
+    /// those types of operators. Therefore, no other checking is necessary.
+    ///
+    /// NOTE: If you don't plan on using one of the `cons_*` functions, you can always just use a
+    /// closure that returns an `unreachable!()`.
+    pub fn new(pa: PA, cons_prefix: CPrefix, cons_infix: CInfix) -> Self {
+        Self {
+            pa,
+            cons_prefix,
+            cons_infix,
+            prefix_ops: vec![],
+            infix_ops: vec![],
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    /// Adds an infix operator to the parser. The order in which you add the operators is their
+    /// *precedence*, i.e. the first operator added binds the weakest, and the last operator added
+    /// binds the strongest. So, to do multiplication before addition, you would do:
+    ///
+    /// ```
+    /// # use errgonomic::prelude::*;
+    /// # let parser = Pratt::new(|_: State<&str, DummyError>| unreachable!(), |_, _: ()| unreachable!(), |_, _, _| unreachable!());
+    /// parser
+    ///     .with_infix_op(is("*"), Associativity::Left)
+    ///     .with_infix_op(is("+"), Associativity::Left);
+    /// ```
+    pub fn with_infix_op<P: Parser<I, OOp, E> + 'a>(mut self, p: P, assoc: Associativity) -> Self {
+        let (lbp, rbp) = match assoc {
+            Associativity::Left => (1, 2),
+            Associativity::Right => (2, 1),
+        };
+
+        // Update the operators, so that they have the correct precedence
+        self.increment_precedence();
+
+        self.infix_ops.push(InfixOperator {
+            p: Box::new(p),
+            lbp,
+            rbp,
+            _marker: std::marker::PhantomData,
+        });
+        self
+    }
+
+    /// Adds a prefix operator to the parser. Like with `with_infix_op`, the order in which you add
+    /// the operators affects their precedence. Notably, if you want precedence over other
+    /// operators (including infix ones!), you would put the `with_prefix_op` call before the
+    /// others.
+    pub fn with_prefix_op<P: Parser<I, OOp, E> + 'a>(mut self, p: P) -> Self {
+        self.increment_precedence();
+
+        self.prefix_ops.push(PrefixOperator {
+            p: Box::new(p),
+            rbp: 1,
+            _marker: std::marker::PhantomData,
+        });
+        self
+    }
+}
+
+impl<I, OExpr, OOp, E, PA, CPrefix, CInfix> Parser<I, OExpr, E>
+    for Pratt<'_, I, OExpr, OOp, E, PA, CPrefix, CInfix>
+where
+    I: Underlying,
+    E: CustomError,
+    PA: Parser<I, OExpr, E>,
+    CPrefix: Fn(OOp, OExpr) -> std::result::Result<OExpr, E>,
+    CInfix: Fn(OExpr, OOp, OExpr) -> std::result::Result<OExpr, E>,
+{
+    fn process(&mut self, state: State<I, E>) -> Result<I, OExpr, E> {
+        self.pratt(state, usize::MIN)
+    }
+}
+
+impl<I, OExpr, OOp, E, PA, CPrefix, CInfix> Pratt<'_, I, OExpr, OOp, E, PA, CPrefix, CInfix>
+where
+    I: Underlying,
+    E: CustomError,
+    PA: Parser<I, OExpr, E>,
+    CPrefix: Fn(OOp, OExpr) -> std::result::Result<OExpr, E>,
+    CInfix: Fn(OExpr, OOp, OExpr) -> std::result::Result<OExpr, E>,
+{
+    /// The actual pratt parser
+    fn pratt(&mut self, state: State<I, E>, min_lbp: usize) -> Result<I, OExpr, E> {
+        let (mut state, mut lhs): (State<I, E>, OExpr) = {
+            // try processing prefix
+            // NOTE: Have to extract this expr. outside of the match b/c otherwise Rust doesn't
+            // drop `self.prefix_ops` until end of match, causing a multiple-mutable-borrow error.
+            // But if we extract the borrow to out here, then the borrow is dropped after `res` is
+            // calculated.
+            let res = self.maybe_parse_prefix_op(state.fork())?;
+
+            match res {
+                // We got a prefix op, parse it!
+                (state, Some((op, rbp))) => {
+                    let (mut state, rhs) = self.pratt(state, rbp)?;
+                    let expr = match (self.cons_prefix)(op, rhs) {
+                        Err(e) => {
+                            let location = state.as_input().fork();
+                            state = state.with_error(Error::new(ErrorKind::custom(e), location));
+                            return Err(state);
+                        }
+                        Ok(x) => x,
+                    };
+                    (state, expr)
+                }
+                // Got an infix op, never mind :(
+                (_, None) => self.pa.process(state)?,
+            }
+        };
+
+        loop {
+            let (new_state, (op, lbp, rbp)) =
+                match maybe(|s| self.parse_infix_op(s)).process(state.fork())? {
+                    (s, Some(x)) => (s, x),
+                    (s, None) => return Ok((s, lhs)),
+                };
+
+            // NOTE: We don't actually want to assign the `state` until after this check, because
+            // otherwise we need to "move up a level" and parse the next operator more weakly.
+            if lbp < min_lbp {
+                break;
+            }
+
+            let (new_state, rhs) = self.pratt(new_state, rbp)?;
+            state = new_state; // reassign to `state`, essentially "advances" parser
+            lhs = match (self.cons_infix)(lhs, op, rhs) {
+                Err(e) => {
+                    let location = state.as_input().fork();
+                    state = state.with_error(Error::new(ErrorKind::custom(e), location));
+                    return Err(state);
+                }
+                Ok(x) => x,
+            };
+        }
+
+        Ok((state, lhs))
+    }
+
+    /// Parses first infix operator that works.
+    fn parse_infix_op(&mut self, state: State<I, E>) -> Result<I, (OOp, usize, usize), E> {
+        any(&mut self.infix_ops).process(state)
+    }
+
+    /// Parses first prefix operator that works.
+    fn maybe_parse_prefix_op(&mut self, state: State<I, E>) -> Result<I, Option<(OOp, usize)>, E> {
+        if self.prefix_ops.is_empty() {
+            return Ok((state, None));
+        }
+
+        maybe(any(&mut self.prefix_ops)).process(state)
+    }
+
+    /// Increment the precedence of all the operators.
+    fn increment_precedence(&mut self) {
+        self.prefix_ops.iter_mut().for_each(|x| x.rbp += 1);
+        self.infix_ops.iter_mut().for_each(|x| {
+            x.lbp += 1;
+            x.rbp += 1;
+        });
+    }
+}

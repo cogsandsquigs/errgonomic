@@ -68,6 +68,7 @@ impl<I: Underlying, O, E: CustomError, P: Parser<I, O, E>> List<I, O, E> for &mu
 
 impl<I: Underlying, O, E: CustomError, P: Parser<I, O, E>> List<I, O, E> for &mut Vec<P> {
     fn any(&mut self, state: State<I, E>) -> Result<I, O, E> {
+        assert!(!self.is_empty(), "There should be at least 1 parser!");
         let mut errs = vec![];
 
         for parser in self.iter_mut() {
