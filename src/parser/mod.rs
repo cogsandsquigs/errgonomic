@@ -25,7 +25,7 @@ where
     /// assert_eq!(parsed, "test");
     /// assert_eq!(state.as_input().as_inner(), "");
     /// ```
-    fn process(&mut self, state: State<I, E>) -> Result<I, O, E>;
+    fn process(&self, state: State<I, E>) -> Result<I, O, E>;
 
     /// Parses an input and returns an output.
     /// WARN: When making parsers, this should *not* be the function to process state and
@@ -63,7 +63,7 @@ where
     /// assert_eq!(parsed, 123);
     /// ```
     #[inline]
-    fn map<O2, F: Fn(O) -> O2>(mut self, f: F) -> impl Parser<I, O2, E>
+    fn map<O2, F: Fn(O) -> O2>(self, f: F) -> impl Parser<I, O2, E>
     where
         Self: Sized,
     {
@@ -89,7 +89,7 @@ where
     /// ```
     #[inline]
     fn map_with_state<O2, F: Fn(State<I, E>, O) -> (State<I, E>, O2)>(
-        mut self,
+        self,
         f: F,
     ) -> impl Parser<I, O2, E>
     where
@@ -101,7 +101,7 @@ where
     /// Like `map`, but processes the output with a function that returns a (std) `Result`. If it's
     /// `Ok`, parsing continues as normal. If it's `Err`, the error is returned.
     #[inline]
-    fn map_res<O2, F: Fn(O) -> core::result::Result<O2, E>>(mut self, f: F) -> impl Parser<I, O2, E>
+    fn map_res<O2, F: Fn(O) -> core::result::Result<O2, E>>(self, f: F) -> impl Parser<I, O2, E>
     where
         Self: Sized,
     {
@@ -131,7 +131,7 @@ where
     /// assert_eq!(second, "abc123");
     /// ```
     #[inline]
-    fn then<O2, P2: Parser<I, O2, E>>(mut self, mut p2: P2) -> impl Parser<I, (O, O2), E>
+    fn then<O2, P2: Parser<I, O2, E>>(self, p2: P2) -> impl Parser<I, (O, O2), E>
     where
         Self: Sized,
     {
@@ -166,10 +166,7 @@ where
     /// assert_eq!(parsed.1, "123");
     /// ```
     #[inline]
-    fn chain<O2, P2: Parser<I, O2, E>, F: Fn(&O) -> P2>(
-        mut self,
-        f: F,
-    ) -> impl Parser<I, (O, O2), E>
+    fn chain<O2, P2: Parser<I, O2, E>, F: Fn(&O) -> P2>(self, f: F) -> impl Parser<I, (O, O2), E>
     where
         Self: Sized,
     {
@@ -208,10 +205,10 @@ where
     /// "said" to occur (make sure to get that right! See `with_err`'s source) and how state is
     /// managed (don't mutate state and then pass it, unless you ABSOLUTELY NEED TO).
     #[inline]
-    fn with_err_and<F>(mut self, mut f: F) -> impl Parser<I, O, E>
+    fn with_err_and<F>(self, f: F) -> impl Parser<I, O, E>
     where
         Self: Sized,
-        F: FnMut(State<I, E>, State<I, E>) -> State<I, E>,
+        F: Fn(State<I, E>, State<I, E>) -> State<I, E>,
     {
         move |state: State<I, E>| {
             let original = state.fork();
@@ -224,11 +221,11 @@ where
 impl<I, O, E, P> Parser<I, O, E> for P
 where
     I: Underlying,
-    P: FnMut(State<I, E>) -> Result<I, O, E>,
+    P: Fn(State<I, E>) -> Result<I, O, E>,
     E: CustomError,
 {
     #[inline]
-    fn process(&mut self, state: State<I, E>) -> Result<I, O, E> {
+    fn process(&self, state: State<I, E>) -> Result<I, O, E> {
         self(state)
     }
 }

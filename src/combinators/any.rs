@@ -19,7 +19,7 @@ use eval_macro::eval;
 ///```
 #[inline]
 #[allow(private_bounds)]
-pub fn any<I: Underlying, O, E: CustomError, L: List<I, O, E>>(mut ps: L) -> impl Parser<I, O, E> {
+pub fn any<I: Underlying, O, E: CustomError, L: List<I, O, E>>(ps: L) -> impl Parser<I, O, E> {
     move |state| ps.any(state)
 }
 
@@ -28,9 +28,7 @@ pub fn any<I: Underlying, O, E: CustomError, L: List<I, O, E>>(mut ps: L) -> imp
 /// definately say that we are supposed to be on this branch, *and* an error occured, then when we
 /// go back up the branch we only return those errors.
 #[inline]
-pub fn commit<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
-    mut p: P,
-) -> impl Parser<I, O, E> {
+pub fn commit<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(p: P) -> impl Parser<I, O, E> {
     move |state| match p.process(state) {
         Ok(x) => Ok(x),
         Err(e) => Err(e.commit()),
@@ -41,14 +39,14 @@ pub fn commit<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
 /* These are annoying and long, you can ignore*/
 
 trait List<I: Underlying, O, E: CustomError> {
-    fn any(&mut self, state: State<I, E>) -> Result<I, O, E>;
+    fn any(&self, state: State<I, E>) -> Result<I, O, E>;
 }
 
-impl<I: Underlying, O, E: CustomError, P: Parser<I, O, E>> List<I, O, E> for &mut [P] {
-    fn any(&mut self, state: State<I, E>) -> Result<I, O, E> {
+impl<I: Underlying, O, E: CustomError, P: Parser<I, O, E>> List<I, O, E> for &[P] {
+    fn any(&self, state: State<I, E>) -> Result<I, O, E> {
         let mut errs = vec![];
 
-        for parser in self.iter_mut() {
+        for parser in self.iter() {
             match parser.process(state.fork()) {
                 Ok(x) => return Ok(x),
                 Err(e) if e.errors().is_committed() => return Err(e),
@@ -66,12 +64,12 @@ impl<I: Underlying, O, E: CustomError, P: Parser<I, O, E>> List<I, O, E> for &mu
     }
 }
 
-impl<I: Underlying, O, E: CustomError, P: Parser<I, O, E>> List<I, O, E> for &mut Vec<P> {
-    fn any(&mut self, state: State<I, E>) -> Result<I, O, E> {
+impl<I: Underlying, O, E: CustomError, P: Parser<I, O, E>> List<I, O, E> for &Vec<P> {
+    fn any(&self, state: State<I, E>) -> Result<I, O, E> {
         assert!(!self.is_empty(), "There should be at least 1 parser!");
         let mut errs = vec![];
 
-        for parser in self.iter_mut() {
+        for parser in self.iter() {
             match parser.process(state.fork()) {
                 Ok(x) => return Ok(x),
                 Err(e) if e.errors().is_committed() => return Err(e),
@@ -125,7 +123,7 @@ eval! {
                 {{parser_defs}}
             {
                 #[inline]
-                fn any(&mut self, state: State<I, E>) -> Result<I, O, E> {
+                fn any(&self, state: State<I, E>) -> Result<I, O, E> {
                     let mut errs: Vec<Error<I, E>> = vec![];
 
                     {{processing}}

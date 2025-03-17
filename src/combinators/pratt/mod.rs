@@ -27,28 +27,34 @@ pub enum Associativity {
     Right,
 }
 
+type PAtom<'a, I, OExpr, E> = &'a dyn Parser<I, OExpr, E>;
+type CPrefix<OExpr, OOp, E> = fn(OOp, OExpr) -> std::result::Result<OExpr, E>;
+type CInfix<OExpr, OOp, E> = fn(OExpr, OOp, OExpr) -> std::result::Result<OExpr, E>;
+type CPostfix<OExpr, OOp, E> = fn(OExpr, OOp) -> std::result::Result<OExpr, E>;
+
 /// A pratt parser, which can handle parsing "operations" in expressions, like addition and
 /// multiplication, or really anything you can think up that is "expression-like".
-pub struct Pratt<'a, I, OExpr, OOp, E, PAtom, CPrefix, CInfix, CPostfix>
+pub struct Pratt<'a, I, OExpr, OOp, E>
+//, CPrefix, CInfix, CPostfix>
 where
     I: Underlying,
     E: CustomError,
-    PAtom: Parser<I, OExpr, E>,
-    CPrefix: Fn(OOp, OExpr) -> std::result::Result<OExpr, E>,
-    CInfix: Fn(OExpr, OOp, OExpr) -> std::result::Result<OExpr, E>,
-    CPostfix: Fn(OExpr, OOp) -> std::result::Result<OExpr, E>,
+    // PAtom: Parser<I, OExpr, E>,
+    // CPrefix: Fn(OOp, OExpr) -> std::result::Result<OExpr, E>,
+    //CInfix: Fn(OExpr, OOp, OExpr) -> std::result::Result<OExpr, E>,
+    // CPostfix: Fn(OExpr, OOp) -> std::result::Result<OExpr, E>,
 {
     /// The atomic parser.
-    pa: PAtom,
+    pa: PAtom<'a, I, OExpr, E>,
 
     /// The prefix combinator
-    cons_prefix: CPrefix,
+    cons_prefix: CPrefix<OExpr, OOp, E>,
 
     /// The infix combinator
-    cons_infix: CInfix,
+    cons_infix: CInfix<OExpr, OOp, E>,
 
     /// The postfix combinator
-    cons_postfix: CPostfix,
+    cons_postfix: CPostfix<OExpr, OOp, E>,
 
     /// The prefix operators
     prefix_ops: Vec<PrefixOperator<'a, I, OOp, E>>,
@@ -62,15 +68,10 @@ where
     _marker: std::marker::PhantomData<(I, OExpr, OOp, E)>,
 }
 
-impl<'a, I, OExpr, OOp, E, PA, CPrefix, CInfix, CPostfix>
-    Pratt<'a, I, OExpr, OOp, E, PA, CPrefix, CInfix, CPostfix>
+impl<'a, I, OExpr, OOp, E> Pratt<'a, I, OExpr, OOp, E>
 where
     I: Underlying,
     E: CustomError,
-    PA: Parser<I, OExpr, E>,
-    CPrefix: Fn(OOp, OExpr) -> std::result::Result<OExpr, E>,
-    CInfix: Fn(OExpr, OOp, OExpr) -> std::result::Result<OExpr, E>,
-    CPostfix: Fn(OExpr, OOp) -> std::result::Result<OExpr, E>,
 {
     /// Creates a new Pratt parser, with no operators and no parsers. The `cons_prefix` and
     /// `cons_infix` parsers *combine* an operator (prefix or infix, respectively) with expressions
@@ -81,7 +82,12 @@ where
     ///
     /// NOTE: If you don't plan on using one of the `cons_*` functions, you can always just use a
     /// closure that returns an `unreachable!()`.
-    pub fn new(pa: PA, cons_prefix: CPrefix, cons_infix: CInfix, cons_postfix: CPostfix) -> Self {
+    pub fn new(
+        pa: PAtom<'a, I, OExpr, E>,
+        cons_prefix: CPrefix<OExpr, OOp, E>,
+        cons_infix: CInfix<OExpr, OOp, E>,
+        cons_postfix: CPostfix<OExpr, OOp, E>,
+    ) -> Self {
         Self {
             pa,
             cons_prefix,
@@ -101,7 +107,7 @@ where
     /// ```
     /// # use errgonomic::prelude::*;
     /// # let parser = Pratt::new(
-    /// #    |_: State<&str, DummyError>| unreachable!(),
+    /// #    &|_: State<&str, DummyError>| unreachable!(),
     /// #    |_, _: ()| unreachable!(),
     /// #    |_, _, _| unreachable!(),
     /// #    |_, _| unreachable!()
@@ -161,33 +167,23 @@ where
     }
 }
 
-impl<I, OExpr, OOp, E, PA, CPrefix, CInfix, CPostfix> Parser<I, OExpr, E>
-    for Pratt<'_, I, OExpr, OOp, E, PA, CPrefix, CInfix, CPostfix>
+impl<I, OExpr, OOp, E> Parser<I, OExpr, E> for Pratt<'_, I, OExpr, OOp, E>
 where
     I: Underlying,
     E: CustomError,
-    PA: Parser<I, OExpr, E>,
-    CPrefix: Fn(OOp, OExpr) -> std::result::Result<OExpr, E>,
-    CInfix: Fn(OExpr, OOp, OExpr) -> std::result::Result<OExpr, E>,
-    CPostfix: Fn(OExpr, OOp) -> std::result::Result<OExpr, E>,
 {
-    fn process(&mut self, state: State<I, E>) -> Result<I, OExpr, E> {
+    fn process(&self, state: State<I, E>) -> Result<I, OExpr, E> {
         self.pratt(state, usize::MIN)
     }
 }
 
-impl<I, OExpr, OOp, E, PA, CPrefix, CInfix, CPostfix>
-    Pratt<'_, I, OExpr, OOp, E, PA, CPrefix, CInfix, CPostfix>
+impl<I, OExpr, OOp, E> Pratt<'_, I, OExpr, OOp, E>
 where
     I: Underlying,
     E: CustomError,
-    PA: Parser<I, OExpr, E>,
-    CPrefix: Fn(OOp, OExpr) -> std::result::Result<OExpr, E>,
-    CInfix: Fn(OExpr, OOp, OExpr) -> std::result::Result<OExpr, E>,
-    CPostfix: Fn(OExpr, OOp) -> std::result::Result<OExpr, E>,
 {
     /// The actual pratt parser
-    fn pratt(&mut self, state: State<I, E>, min_lbp: usize) -> Result<I, OExpr, E> {
+    fn pratt(&self, state: State<I, E>, min_lbp: usize) -> Result<I, OExpr, E> {
         let (mut state, mut lhs): (State<I, E>, OExpr) = {
             // try processing prefix
             // NOTE: Have to extract this expr. outside of the match b/c otherwise Rust doesn't
@@ -200,7 +196,7 @@ where
                 // We got a prefix op, parse it!
                 (state, Some((op, rbp))) => {
                     let (state, rhs) = self.pratt(state, rbp)?;
-                    prefix_cons_wrapper(op, rhs, &mut self.cons_prefix, state)?
+                    prefix_cons_wrapper(op, rhs, &self.cons_prefix, state)?
                 }
                 // Never mind :(
                 (_, None) => self.pa.process(state)?,
@@ -217,8 +213,7 @@ where
                         break;
                     }
 
-                    (state, lhs) =
-                        postfix_cons_wrapper(lhs, op, &mut self.cons_postfix, new_state)?;
+                    (state, lhs) = postfix_cons_wrapper(lhs, op, &self.cons_postfix, new_state)?;
 
                     continue;
                 }
@@ -239,33 +234,33 @@ where
             }
 
             let (new_state, rhs) = self.pratt(new_state, rbp)?;
-            (state, lhs) = infix_cons_wrapper(lhs, op, rhs, &mut self.cons_infix, new_state)?;
+            (state, lhs) = infix_cons_wrapper(lhs, op, rhs, &self.cons_infix, new_state)?;
         }
 
         Ok((state, lhs))
     }
 
     /// Parses first infix operator that works.
-    fn parse_infix_op(&mut self, state: State<I, E>) -> Result<I, (usize, OOp, usize), E> {
-        any(&mut self.infix_ops).process(state)
+    fn parse_infix_op(&self, state: State<I, E>) -> Result<I, (usize, OOp, usize), E> {
+        any(&self.infix_ops).process(state)
     }
 
     /// Parses first prefix operator that works.
-    fn maybe_parse_prefix_op(&mut self, state: State<I, E>) -> Result<I, Option<(OOp, usize)>, E> {
+    fn maybe_parse_prefix_op(&self, state: State<I, E>) -> Result<I, Option<(OOp, usize)>, E> {
         if self.prefix_ops.is_empty() {
             return Ok((state, None));
         }
 
-        maybe(any(&mut self.prefix_ops)).process(state)
+        maybe(any(&self.prefix_ops)).process(state)
     }
 
     /// Parses first postfix operator that works.
-    fn maybe_parse_postfix_op(&mut self, state: State<I, E>) -> Result<I, Option<(usize, OOp)>, E> {
+    fn maybe_parse_postfix_op(&self, state: State<I, E>) -> Result<I, Option<(usize, OOp)>, E> {
         if self.postfix_ops.is_empty() {
             return Ok((state, None));
         }
 
-        maybe(any(&mut self.postfix_ops)).process(state)
+        maybe(any(&self.postfix_ops)).process(state)
     }
 
     /// Increment the precedence of all the operators.

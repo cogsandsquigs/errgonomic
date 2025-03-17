@@ -31,8 +31,8 @@ pub fn separated<
     P1: Parser<I, O1, E>,
     P2: Parser<I, O2, E>,
 >(
-    mut p: P1,
-    mut sep: P2,
+    p: P1,
+    sep: P2,
     ignore_dangling: bool,
 ) -> impl Parser<I, Vec<O1>, E> {
     move |state: State<I, E>| -> Result<I, Vec<O1>, E> {

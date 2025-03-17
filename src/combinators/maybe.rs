@@ -13,7 +13,7 @@ use crate::parser::{errors::CustomError, input::Underlying, state::State, Parser
 /// assert_eq!(parsed, None);
 /// ```
 pub fn maybe<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
-    mut p: P,
+    p: P,
 ) -> impl Parser<I, Option<O>, E> {
     move |state: State<I, E>| match p.process(state.fork()) {
         Ok((new_state, o)) => Ok((new_state, Some(o))),

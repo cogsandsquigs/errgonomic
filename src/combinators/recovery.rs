@@ -30,10 +30,7 @@ use super::take_until;
 /// assert!(state.is_err());
 /// ```
 #[inline]
-pub fn panic_recover<I, O1, O2, E, P1, P2>(
-    mut p: P1,
-    mut until: P2,
-) -> impl Parser<I, Option<O1>, E>
+pub fn panic_recover<I, O1, O2, E, P1, P2>(p: P1, until: P2) -> impl Parser<I, Option<O1>, E>
 where
     I: Underlying,
     E: CustomError,

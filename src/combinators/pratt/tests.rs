@@ -1,5 +1,7 @@
 #![cfg(test)]
 
+use std::{cell::LazyCell, sync::LazyLock};
+
 use super::*;
 use crate::{
     combinators::{alphabetic, decimal, is, whitespace_wrapped as ww},
@@ -25,17 +27,10 @@ enum Op {
     Factorial,
 }
 
-fn atom(state: State<&str, DummyError>) -> Result<&str, Expr, DummyError> {
-    any((
-        decimal.map(|n: Input<&str>| Expr::Int(n.as_inner().parse().unwrap())),
-        alphabetic.map(|s: Input<&str>| Expr::Ident(s.as_inner().to_string())),
-    ))
-    .process(state)
-}
-
-fn pratt_parser(state: State<&str>) -> Result<&str, Expr, DummyError> {
+#[allow(clippy::declare_interior_mutable_const)]
+const PRATT_PARSER: LazyLock<Pratt<&str, Expr, Op, DummyError>> = LazyLock::new(|| {
     Pratt::new(
-        atom,
+        &atom,
         |op, rhs| Ok(Expr::Prefix(op, Box::new(rhs))),
         |lhs, op, rhs| Ok(Expr::Infix(Box::new(lhs), op, Box::new(rhs))),
         |lhs, op| Ok(Expr::Postfix(Box::new(lhs), op)),
@@ -47,12 +42,19 @@ fn pratt_parser(state: State<&str>) -> Result<&str, Expr, DummyError> {
     .with_infix_op(ww(is("/")).map(|_| Op::Div), Associativity::Left)
     .with_infix_op(ww(is("+")).map(|_| Op::Add), Associativity::Left)
     .with_infix_op(ww(is("-")).map(|_| Op::Sub), Associativity::Left)
+});
+
+fn atom(state: State<&str, DummyError>) -> Result<&str, Expr, DummyError> {
+    any((
+        decimal.map(|n: Input<&str>| Expr::Int(n.as_inner().parse().unwrap())),
+        alphabetic.map(|s: Input<&str>| Expr::Ident(s.as_inner().to_string())),
+    ))
     .process(state)
 }
 
 #[test]
 fn can_parse_atomic() {
-    let (state, parsed): (State<&str>, Expr) = pratt_parser.process("123".into()).unwrap();
+    let (state, parsed): (State<&str>, Expr) = PRATT_PARSER.process("123".into()).unwrap();
     assert_eq!(parsed, Expr::Int(123));
     assert_eq!(state.as_input(), &"");
     assert!(state.is_ok());
@@ -60,7 +62,7 @@ fn can_parse_atomic() {
 
 #[test]
 fn can_parse_simple_expr() {
-    let (state, parsed): (State<&str>, Expr) = pratt_parser.process("123 + 456".into()).unwrap();
+    let (state, parsed): (State<&str>, Expr) = PRATT_PARSER.process("123 + 456".into()).unwrap();
     assert_eq!(
         parsed,
         Expr::Infix(Box::new(Expr::Int(123)), Op::Add, Box::new(Expr::Int(456)),)
@@ -72,7 +74,7 @@ fn can_parse_simple_expr() {
 #[test]
 fn can_parse_complex_expr() {
     let (state, parsed): (State<&str>, Expr) =
-        pratt_parser.process("123 + 456 * 789".into()).unwrap();
+        PRATT_PARSER.process("123 + 456 * 789".into()).unwrap();
     assert_eq!(
         parsed,
         Expr::Infix(
@@ -89,7 +91,7 @@ fn can_parse_complex_expr() {
     assert!(state.is_ok());
 
     let (state, parsed): (State<&str>, Expr) =
-        pratt_parser.process("123 * 456 + 789".into()).unwrap();
+        PRATT_PARSER.process("123 * 456 + 789".into()).unwrap();
     assert_eq!(
         parsed,
         Expr::Infix(
@@ -109,7 +111,7 @@ fn can_parse_complex_expr() {
 #[test]
 fn can_parse_left_associative() {
     let (state, parsed): (State<&str>, Expr) =
-        pratt_parser.process("123 + 456 + 789".into()).unwrap();
+        PRATT_PARSER.process("123 + 456 + 789".into()).unwrap();
     assert_eq!(
         parsed,
         Expr::Infix(
@@ -128,7 +130,7 @@ fn can_parse_left_associative() {
 
 #[test]
 fn can_parse_right_associative() {
-    let (state, parsed): (State<&str>, Expr) = pratt_parser.process("a . b . c".into()).unwrap();
+    let (state, parsed): (State<&str>, Expr) = PRATT_PARSER.process("a . b . c".into()).unwrap();
     assert_eq!(
         parsed,
         Expr::Infix(
@@ -147,12 +149,12 @@ fn can_parse_right_associative() {
 
 #[test]
 fn can_parse_prefix() {
-    let (state, parsed): (State<&str>, Expr) = pratt_parser.process("-123".into()).unwrap();
+    let (state, parsed): (State<&str>, Expr) = PRATT_PARSER.process("-123".into()).unwrap();
     assert_eq!(parsed, Expr::Prefix(Op::Sub, Box::new(Expr::Int(123))));
     assert_eq!(state.as_input(), &"");
     assert!(state.is_ok());
 
-    let (state, parsed): (State<&str>, Expr) = pratt_parser.process("--123".into()).unwrap();
+    let (state, parsed): (State<&str>, Expr) = PRATT_PARSER.process("--123".into()).unwrap();
     assert_eq!(
         parsed,
         Expr::Prefix(
@@ -166,7 +168,7 @@ fn can_parse_prefix() {
 
 #[test]
 fn can_parse_complex_prefix() {
-    let (state, parsed): (State<&str>, Expr) = pratt_parser.process("1 + -23 * 5".into()).unwrap();
+    let (state, parsed): (State<&str>, Expr) = PRATT_PARSER.process("1 + -23 * 5".into()).unwrap();
     assert_eq!(
         parsed,
         Expr::Infix(
@@ -185,7 +187,7 @@ fn can_parse_complex_prefix() {
 
 #[test]
 fn can_parse_postfix() {
-    let (state, parsed): (State<&str>, Expr) = pratt_parser.process("123!".into()).unwrap();
+    let (state, parsed): (State<&str>, Expr) = PRATT_PARSER.process("123!".into()).unwrap();
     assert_eq!(
         parsed,
         Expr::Postfix(Box::new(Expr::Int(123)), Op::Factorial)
@@ -196,7 +198,7 @@ fn can_parse_postfix() {
 
 #[test]
 fn can_parse_complex_postfix() {
-    let (state, parsed): (State<&str>, Expr) = pratt_parser.process("123! + 456".into()).unwrap();
+    let (state, parsed): (State<&str>, Expr) = PRATT_PARSER.process("123! + 456".into()).unwrap();
     assert_eq!(
         parsed,
         Expr::Infix(
@@ -212,7 +214,7 @@ fn can_parse_complex_postfix() {
 #[test]
 fn can_parse_prefix_and_postfix() {
     let (state, parsed): (State<&str>, Expr) =
-        pratt_parser.process("3 * -123! + 456".into()).unwrap();
+        PRATT_PARSER.process("3 * -123! + 456".into()).unwrap();
 
     // NOTE: Since `!` was declared first, we expect it to bind more tightly than `-`. Thus, we
     // should expect `-123!` to become `-(123!)`.

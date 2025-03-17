@@ -18,7 +18,7 @@ use crate::parser::{
 /// assert_eq!(state.as_input().as_inner(), ", world!");
 ///```
 pub fn many<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
-    mut p: P,
+    p: P,
 ) -> impl Parser<I, Vec<O>, E> {
     move |mut state: State<I, E>| -> Result<I, Vec<O>, E> {
         let mut results = Vec::new();
@@ -58,7 +58,7 @@ pub fn many<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
 ///```
 pub fn many_n<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
     n: usize,
-    mut p: P,
+    p: P,
 ) -> impl Parser<I, Vec<O>, E> {
     move |mut state: State<I, E>| -> Result<I, Vec<O>, E> {
         let mut results = Vec::new();
@@ -110,7 +110,7 @@ pub fn many_n<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
 pub fn many_m_n<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
     m: usize,
     n: usize,
-    mut p: P,
+    p: P,
 ) -> impl Parser<I, Vec<O>, E> {
     move |mut state: State<I, E>| -> Result<I, Vec<O>, E> {
         let mut results = Vec::new();
@@ -161,8 +161,8 @@ pub fn many_until<
     P1: Parser<I, O1, E>,
     P2: Parser<I, O2, E>,
 >(
-    mut p: P1,
-    mut until: P2,
+    p: P1,
+    until: P2,
 ) -> impl Parser<I, (Vec<O1>, O2), E> {
     move |mut state: State<I, E>| -> Result<I, (Vec<O1>, O2), E> {
         let mut results = Vec::new();

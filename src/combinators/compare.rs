@@ -64,9 +64,7 @@ pub fn is<I: Underlying, E: CustomError>(matches: I) -> impl Parser<I, Input<I>,
 /// let (state, _): (State<&str>, ()) = not(is("st")).process("test".into()).unwrap();
 /// assert_eq!(state.as_input().as_inner(), "test");
 /// ```
-pub fn not<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
-    mut p: P,
-) -> impl Parser<I, (), E> {
+pub fn not<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(p: P) -> impl Parser<I, (), E> {
     move |state: State<I, E>| match p.process(state.fork()) {
         Ok((new_state, _)) => {
             let found = state.as_input().fork().subtract(new_state.as_input());

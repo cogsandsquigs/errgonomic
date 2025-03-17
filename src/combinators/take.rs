@@ -83,7 +83,7 @@ pub fn take<I: Underlying, E: CustomError>(n: usize) -> impl Parser<I, Input<I>,
 /// assert_eq!(state.as_input().as_inner(), "!");
 /// ```
 pub fn take_until<I: Underlying, O2, E: CustomError, P: Parser<I, O2, E>>(
-    mut until: P,
+    until: P,
 ) -> impl Parser<I, (Input<I>, O2), E> {
     move |mut state: State<I, E>| -> Result<I, (Input<I>, O2), E> {
         let mut taken_len = 0;

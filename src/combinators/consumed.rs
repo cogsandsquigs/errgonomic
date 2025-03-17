@@ -7,7 +7,7 @@ use crate::parser::{
 
 /// Gets the input consumed by the parser and returns it as the output.
 pub fn consumed<I: Underlying, O, E: CustomError, P: Parser<I, O, E>>(
-    mut p: P,
+    p: P,
 ) -> impl Parser<I, Input<I>, E> {
     move |state: State<I, E>| {
         let (new_state, _) = p.process(state.fork())?;
