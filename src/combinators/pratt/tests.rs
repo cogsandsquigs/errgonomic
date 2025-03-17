@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use std::{cell::LazyCell, sync::LazyLock};
+use std::sync::LazyLock;
 
 use super::*;
 use crate::{
