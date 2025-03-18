@@ -98,6 +98,22 @@ where
         move |state: State<I, E>| self.process(state).map(|(state, output)| f(state, output))
     }
 
+    /// Like `map_with_state`, but allows a parser to be formed from a function that takes in the
+    /// output *and* the state. This is useful for dealing with lifetimes/moves/etc.
+    #[inline]
+    fn map_with_res<O2, F: Fn(State<I, E>, O) -> Result<I, O2, E>>(
+        self,
+        f: F,
+    ) -> impl Parser<I, O2, E>
+    where
+        Self: Sized,
+    {
+        move |state: State<I, E>| -> Result<I, O2, E> {
+            let (state, output) = self.process(state)?;
+            f(state, output)
+        }
+    }
+
     /// Like `map`, but processes the output with a function that returns a (std) `Result`. If it's
     /// `Ok`, parsing continues as normal. If it's `Err`, the error is returned.
     #[inline]
